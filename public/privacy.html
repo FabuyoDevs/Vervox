@@ -1,0 +1,590 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#4f46e5" />
+    <title>Privacy Policy &amp; Terms of Service — Vervox PWA</title>
+    <meta
+      name="description"
+      content="How Vervox (by FabuyoDevs) handles task data, anonymous authentication, partner & pod sync, media attachments, Flutterwave payments, and local PWA storage."
+    />
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
+            },
+          },
+        },
+      };
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <style>
+      html {
+        scroll-behavior: smooth;
+        scroll-padding-top: 6rem;
+      }
+      @media print {
+        .no-print {
+          display: none !important;
+        }
+      }
+    </style>
+  </head>
+  <body class="bg-slate-50 font-sans text-slate-600 antialiased">
+    <a
+      href="#content"
+      class="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-indigo-600 focus:px-4 focus:py-2 focus:text-white"
+      >Skip to content</a
+    >
+
+    <!-- Header -->
+    <header class="border-b border-slate-200 bg-white">
+      <div class="mx-auto max-w-5xl px-5 py-8 sm:py-12">
+        <div class="flex items-center gap-3">
+          <span
+            class="grid h-11 w-11 place-items-center rounded-xl bg-gradient-to-br from-indigo-600 to-emerald-500 text-lg font-bold text-white shadow-sm"
+            >V</span
+          >
+          <p class="text-[15px] font-bold tracking-tight text-slate-900">
+            Ver<span class="bg-gradient-to-r from-indigo-600 to-emerald-500 bg-clip-text text-transparent">vox</span>
+          </p>
+        </div>
+
+        <h1 class="mt-6 text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
+          Privacy Policy &amp; Terms of Service
+        </h1>
+        <p class="mt-2 text-[13px] font-medium text-slate-500">
+          Effective Date: September 2, 2026 &nbsp;|&nbsp; Application: Vervox PWA
+        </p>
+
+        <div
+          class="mt-6 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl border border-indigo-200 bg-indigo-50/70 px-4 py-3"
+        >
+          <span class="text-[13px] font-semibold text-indigo-900">Engineered &amp; Maintained by FabuyoDevs</span>
+          <a
+            href="https://fabuyodevs.vercel.app"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3 py-1.5 text-[12px] font-semibold text-white shadow-sm transition hover:bg-indigo-700"
+          >
+            fabuyodevs.vercel.app
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M7 17 17 7M9 7h8v8" />
+            </svg>
+          </a>
+        </div>
+      </div>
+    </header>
+
+    <div class="mx-auto max-w-5xl px-5 py-10">
+      <div class="grid gap-10 lg:grid-cols-[15rem_1fr]">
+        <!-- Table of contents -->
+        <aside class="no-print lg:sticky lg:top-8 lg:self-start">
+          <nav aria-label="Table of contents" class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <p class="mb-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">On this page</p>
+            <ol class="space-y-1.5 text-[12.5px]">
+              <li><a class="text-slate-600 hover:text-indigo-600" href="#overview">Overview</a></li>
+              <li><a class="text-slate-600 hover:text-indigo-600" href="#architecture">1. Architecture &amp; Data Minimisation</a></li>
+              <li><a class="text-slate-600 hover:text-indigo-600" href="#task-data">2. Task Data &amp; Partner Sync</a></li>
+              <li><a class="text-slate-600 hover:text-indigo-600" href="#media">3. Third-Party Media Attachments</a></li>
+              <li><a class="text-slate-600 hover:text-indigo-600" href="#payments">4. Payments &amp; Multi-Currency Billing</a></li>
+              <li><a class="text-slate-600 hover:text-indigo-600" href="#storage">5. Local Storage, Service Workers &amp; Notifications</a></li>
+              <li><a class="text-slate-600 hover:text-indigo-600" href="#rights">6. Your Rights &amp; Data Clearing</a></li>
+              <li><a class="text-slate-600 hover:text-indigo-600" href="#terms">7. Terms of Service</a></li>
+              <li><a class="text-slate-600 hover:text-indigo-600" href="#contact">8. Developer Contact</a></li>
+            </ol>
+          </nav>
+        </aside>
+
+        <!-- Content -->
+        <main id="content" class="space-y-6">
+          <section id="overview" class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 class="text-lg font-bold text-slate-900">Overview</h2>
+            <p class="mt-2 text-[13.5px] leading-relaxed">
+              Vervox is a privacy-first, offline-capable task manager built for single-user focus and zero-password
+              collaboration with one partner or a small Group Pod. This document explains — in plain language — what data
+              Vervox touches, where it lives, who can see it, and how you stay in control. It applies to the Vervox
+              Progressive Web App (the “App”) and the related websites operated by
+              <strong class="font-semibold text-slate-900">FabuyoDevs</strong>.
+            </p>
+            <p class="mt-3 text-[13.5px] leading-relaxed">
+              Our guiding principle is <strong class="font-semibold text-slate-900">data minimisation</strong>: Vervox asks
+              for the least amount of information required to make the product work, keeps it for the shortest practical
+              period, and never sells it.
+            </p>
+          </section>
+
+          <!-- 1 -->
+          <section id="architecture" class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 class="text-lg font-bold text-slate-900">
+              <span class="mr-2 text-indigo-600">1.</span>Application Architecture &amp; Data Minimisation
+            </h2>
+            <p class="mt-3 text-[13.5px] leading-relaxed">
+              Vervox operates as a <strong class="font-semibold text-slate-900">Progressive Web App (PWA)</strong>. It can be
+              installed to a home screen or dock and runs offline, syncing whenever a connection is available.
+            </p>
+            <ul class="mt-4 space-y-2.5 text-[13.5px] leading-relaxed">
+              <li class="flex gap-2.5">
+                <span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-indigo-600"></span>
+                <span
+                  ><strong class="font-semibold text-slate-900">Firebase Anonymous Authentication.</strong> When cloud sync
+                  is enabled, Vervox signs your device in anonymously. This produces an opaque technical identifier used only
+                  to authorise database reads and writes.</span
+                >
+              </li>
+              <li class="flex gap-2.5">
+                <span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-indigo-600"></span>
+                <span
+                  ><strong class="font-semibold text-slate-900">Device-bound UUIDs.</strong> On first launch, Vervox
+                  generates a cryptographically random device UUID (using the browser’s <code class="rounded bg-slate-100 px-1 py-0.5 text-[12px]">crypto.randomUUID()</code>
+                  where available) and stores it locally in IndexedDB. This UUID — not your name, email or phone number — is
+                  how a paired device or pod member recognises you.</span
+                >
+              </li>
+              <li class="flex gap-2.5">
+                <span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-indigo-600"></span>
+                <span
+                  ><strong class="font-semibold text-slate-900">No traditional accounts.</strong> You are
+                  <em>not</em> required to create an account with an email address, password, phone number, or any personal
+                  identity credential to use Vervox’s core task-management features — including tasks, subtasks, schedules,
+                  alarms, reminders, and 1-on-1 pairing.</span
+                >
+              </li>
+              <li class="flex gap-2.5">
+                <span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-indigo-600"></span>
+                <span
+                  ><strong class="font-semibold text-slate-900">No analytics or ad trackers.</strong> Vervox does not embed
+                  third-party advertising SDKs, cross-site analytics beacons, fingerprinting scripts, or behavioural
+                  profiling tools.</span
+                >
+              </li>
+              <li class="flex gap-2.5">
+                <span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-indigo-600"></span>
+                <span
+                  ><strong class="font-semibold text-slate-900">Optional display name.</strong> If you choose a display name
+                  for a Group Pod, it is stored alongside your device UUID and shown only to pod members. You may leave it
+                  blank or change it at any time.</span
+                >
+              </li>
+            </ul>
+            <p class="mt-4 rounded-xl bg-slate-50 p-3 text-[12.5px] leading-relaxed text-slate-600">
+              If you never enable cloud sync, Vervox runs entirely on a local, on-device engine. In that mode none of your
+              task content leaves your device.
+            </p>
+          </section>
+
+          <!-- 2 -->
+          <section id="task-data" class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 class="text-lg font-bold text-slate-900">
+              <span class="mr-2 text-indigo-600">2.</span>Task Data &amp; Partner Synchronisation
+            </h2>
+            <p class="mt-3 text-[13.5px] leading-relaxed">
+              When cloud sync is enabled, task content — <strong class="font-semibold text-slate-900">titles, completion
+              statuses, timestamps, subtasks (sub-items), priority, schedule and alarm settings, and optional location tags</strong>
+              — is synchronised using <strong class="font-semibold text-slate-900">Google Cloud Firestore</strong> so that
+              changes appear in real time on every authorised device.
+            </p>
+            <ul class="mt-4 space-y-2.5 text-[13.5px] leading-relaxed">
+              <li class="flex gap-2.5">
+                <span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-indigo-600"></span>
+                <span
+                  ><strong class="font-semibold text-slate-900">Row-Level Security (RLS).</strong> Access control is strictly
+                  enforced server-side by Firestore security rules. A task document records the exact list of device UUIDs
+                  and authentication UIDs permitted to see it. The database refuses any read, update, or delete request from
+                  a caller that is not on that list — the app’s interface is never the only gatekeeper.</span
+                >
+              </li>
+              <li class="flex gap-2.5">
+                <span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-indigo-600"></span>
+                <span
+                  ><strong class="font-semibold text-slate-900">1-on-1 pairing.</strong> Two devices link using a
+                  single-use, six-character invitation code (for example <code class="rounded bg-slate-100 px-1 py-0.5 text-[12px]">TASK-8F2A</code>)
+                  that expires after 15 minutes and is destroyed the instant it is redeemed. Attempts are rate-limited to
+                  protect against brute-force guessing.</span
+                >
+              </li>
+              <li class="flex gap-2.5">
+                <span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-indigo-600"></span>
+                <span
+                  ><strong class="font-semibold text-slate-900">Group Pods (up to 6 members).</strong> Pod invitations use
+                  the same single-use, expiring code mechanism (prefixed <code class="rounded bg-slate-100 px-1 py-0.5 text-[12px]">POD-</code>).
+                  A pod admits a maximum of six device UUIDs, and Vervox refuses to widen a task’s audience beyond that
+                  limit. Tasks shared in a pod are readable only by current pod members.</span
+                >
+              </li>
+              <li class="flex gap-2.5">
+                <span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-indigo-600"></span>
+                <span
+                  ><strong class="font-semibold text-slate-900">Unlinking.</strong> Unpairing or leaving a pod revokes future
+                  access immediately. You should also archive or delete any tasks you no longer wish to share.</span
+                >
+              </li>
+            </ul>
+            <p class="mt-4 text-[13.5px] leading-relaxed">
+              Vervox does not use your task content for advertising, model training, or profiling, and does not disclose it
+              to third parties except as described in this policy.
+            </p>
+          </section>
+
+          <!-- 3 -->
+          <section id="media" class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 class="text-lg font-bold text-slate-900">
+              <span class="mr-2 text-indigo-600">3.</span>Third-Party Media Attachments
+            </h2>
+            <p class="mt-3 text-[13.5px] leading-relaxed">
+              Vervox can attach proof-of-performance media to a completed task — for example a photo snapshot or a short
+              (maximum 15-second) voice note.
+            </p>
+            <ul class="mt-4 space-y-2.5 text-[13.5px] leading-relaxed">
+              <li class="flex gap-2.5">
+                <span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-indigo-600"></span>
+                <span
+                  ><strong class="font-semibold text-slate-900">Media does not sit on Vervox core database servers.</strong>
+                  Media payloads are not stored as binary content inside the Vervox task database.</span
+                >
+              </li>
+              <li class="flex gap-2.5">
+                <span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-indigo-600"></span>
+                <span
+                  ><strong class="font-semibold text-slate-900">External link conversion.</strong> Media assets are
+                  converted to external string URLs through third-party link converter / image hosting APIs (for example
+                  <strong class="font-semibold text-slate-900">ImgBB</strong> or
+                  <strong class="font-semibold text-slate-900">FreeImageHost</strong>). Only the resulting
+                  <strong class="font-semibold text-slate-900">secure HTTPS link</strong> is referenced on the task
+                  document.</span
+                >
+              </li>
+              <li class="flex gap-2.5">
+                <span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-indigo-600"></span>
+                <span
+                  ><strong class="font-semibold text-slate-900">Third-party terms apply.</strong> Because the file lives
+                  with the hosting provider, that provider’s own terms and retention practices govern the stored asset.
+                  Anyone who holds the direct URL may be able to open it, so please avoid attaching sensitive documents,
+                  identity cards, or confidential material.</span
+                >
+              </li>
+              <li class="flex gap-2.5">
+                <span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-indigo-600"></span>
+                <span
+                  ><strong class="font-semibold text-slate-900">Your camera and microphone.</strong> Media capture happens
+                  only when you explicitly tap the capture control. Camera and microphone permissions are granted and
+                  revocable through your browser or operating system; declining them simply disables attachments.</span
+                >
+              </li>
+              <li class="flex gap-2.5">
+                <span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-indigo-600"></span>
+                <span
+                  ><strong class="font-semibold text-slate-900">Removal.</strong> Deleting an attachment removes the
+                  reference from the task. Removal of the underlying hosted file is subject to the hosting provider’s
+                  deletion process.</span
+                >
+              </li>
+            </ul>
+          </section>
+
+          <!-- 4 -->
+          <section id="payments" class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 class="text-lg font-bold text-slate-900">
+              <span class="mr-2 text-indigo-600">4.</span>Payment Processing &amp; Multi-Currency Billing (Flutterwave)
+            </h2>
+            <p class="mt-3 text-[13.5px] leading-relaxed">
+              Vervox offers optional paid upgrades: a Themes &amp; Sounds Pack, a Cloud Proof &amp; Media subscription, a
+              lifetime Group Pods unlock, and the Pro Bundle.
+            </p>
+            <ul class="mt-4 space-y-2.5 text-[13.5px] leading-relaxed">
+              <li class="flex gap-2.5">
+                <span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-indigo-600"></span>
+                <span
+                  ><strong class="font-semibold text-slate-900">Processed externally by Flutterwave.</strong> All digital
+                  microtransactions, lifetime pod unlocks, and Pro tier upgrades are processed externally through
+                  <strong class="font-semibold text-slate-900">Flutterwave</strong>’s hosted checkout. Payment credentials
+                  are entered on Flutterwave-controlled surfaces.</span
+                >
+              </li>
+              <li class="flex gap-2.5">
+                <span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-indigo-600"></span>
+                <span
+                  ><strong class="font-semibold text-slate-900">We never touch your financial data.</strong> Vervox never
+                  collects, processes, transmits, or stores credit or debit card numbers, bank account details, card PINs,
+                  CVV/CVC codes, OTPs, or any other sensitive financial credential on its own servers or databases.</span
+                >
+              </li>
+              <li class="flex gap-2.5">
+                <span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-indigo-600"></span>
+                <span
+                  ><strong class="font-semibold text-slate-900">What we keep.</strong> We retain only a minimal purchase
+                  record — which plan was bought, when, and a locally generated transaction reference — so that your
+                  entitlement tier can be restored on your device and, where cloud sync is enabled, associated with your
+                  anonymous account.</span
+                >
+              </li>
+              <li class="flex gap-2.5">
+                <span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-indigo-600"></span>
+                <span
+                  ><strong class="font-semibold text-slate-900">Multi-currency pricing.</strong> Vervox displays prices in
+                  <strong class="font-semibold text-slate-900">NGN, USD, KES, GBP and EUR</strong> (and other supported
+                  currencies) using a static pricing table. Currency selection relies on
+                  <strong class="font-semibold text-slate-900">lightweight IP-based country detection</strong> performed at
+                  app start. This is a one-shot lookup used purely to choose a display and billing currency.</span
+                >
+              </li>
+              <li class="flex gap-2.5">
+                <span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-indigo-600"></span>
+                <span
+                  ><strong class="font-semibold text-slate-900">No continuous location tracking.</strong> Vervox does
+                  <em>not</em> store GPS history and does not track your movements. Precise location is requested only if
+                  you voluntarily tap “Tag location” on an individual task, and that coordinate is saved on that task alone
+                  and shared only with your paired device or pod.</span
+                >
+              </li>
+              <li class="flex gap-2.5">
+                <span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-indigo-600"></span>
+                <span
+                  ><strong class="font-semibold text-slate-900">Refunds &amp; chargebacks.</strong> Refunds, disputes, and
+                  chargebacks are handled under Flutterwave’s and the applicable payment provider’s policies. Vervox can
+                  revoke or restore an entitlement to match a verified refund outcome.</span
+                >
+              </li>
+            </ul>
+          </section>
+
+          <!-- 5 -->
+          <section id="storage" class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 class="text-lg font-bold text-slate-900">
+              <span class="mr-2 text-indigo-600">5.</span>PWA Local Storage, Service Workers &amp; Notifications
+            </h2>
+            <p class="mt-3 text-[13.5px] leading-relaxed">
+              To make Vervox fast and usable without a connection, the App stores data on your device:
+            </p>
+            <ul class="mt-4 space-y-2.5 text-[13.5px] leading-relaxed">
+              <li class="flex gap-2.5">
+                <span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-indigo-600"></span>
+                <span
+                  ><strong class="font-semibold text-slate-900">IndexedDB.</strong> Holds your task cache for offline
+                  reading, your locally generated device UUID, archived completions, and any media blobs when you are using
+                  the on-device (server-less) engine.</span
+                >
+              </li>
+              <li class="flex gap-2.5">
+                <span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-indigo-600"></span>
+                <span
+                  ><strong class="font-semibold text-slate-900">LocalStorage.</strong> Stores lightweight preferences —
+                  theme, chime pack, quiet-hours window, notification switch, purchase receipts, and dismissal flags for
+                  banners such as the install prompt.</span
+                >
+              </li>
+              <li class="flex gap-2.5">
+                <span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-indigo-600"></span>
+                <span
+                  ><strong class="font-semibold text-slate-900">Service Worker (<code class="rounded bg-slate-100 px-1 py-0.5 text-[12px]">sw.js</code>).</strong>
+                  Caches app assets for instant, offline-first loading, supports background push delivery, and performs
+                  automatic background synchronisation of pending task changes once your network reconnects — so edits made
+                  offline are queued and flushed rather than lost.</span
+                >
+              </li>
+              <li class="flex gap-2.5">
+                <span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-indigo-600"></span>
+                <span
+                  ><strong class="font-semibold text-slate-900">Notifications &amp; chimes are optional.</strong> Web Push
+                  and local notifications (scheduled alarms, partner completion updates, nudges) are delivered only after
+                  you grant the operating-system level permission, and can be turned off at any time from Settings →
+                  Preferences or revoked in your browser’s site settings. Completion chimes are synthesised locally in your
+                  browser and can be muted with the Audio Chimes toggle or silenced with Quiet Hours.</span
+                >
+              </li>
+              <li class="flex gap-2.5">
+                <span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-indigo-600"></span>
+                <span
+                  ><strong class="font-semibold text-slate-900">Push subscriptions.</strong> If you enable push, your
+                  browser issues a push subscription endpoint. It is used solely to deliver the notifications described
+                  above.</span
+                >
+              </li>
+            </ul>
+            <p class="mt-4 text-[13.5px] leading-relaxed">
+              Local data never leaves your device except as described in Sections 2–4, and is removed when you clear site
+              data or uninstall the App.
+            </p>
+          </section>
+
+          <!-- 6 -->
+          <section id="rights" class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 class="text-lg font-bold text-slate-900">
+              <span class="mr-2 text-indigo-600">6.</span>Your Rights &amp; Data Clearing
+            </h2>
+            <p class="mt-3 text-[13.5px] leading-relaxed">
+              Because Vervox is accountless, you remain in direct control of your data at all times. You may:
+            </p>
+            <ul class="mt-4 space-y-2.5 text-[13.5px] leading-relaxed">
+              <li class="flex gap-2.5">
+                <span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-indigo-600"></span>
+                <span
+                  ><strong class="font-semibold text-slate-900">Erase local data.</strong> Clear the App’s IndexedDB and
+                  LocalStorage from your browser’s site settings (or by uninstalling the installed PWA). This deletes the
+                  offline task cache, device UUID, archived completions, and local purchase receipts.</span
+                >
+              </li>
+              <li class="flex gap-2.5">
+                <span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-indigo-600"></span>
+                <span
+                  ><strong class="font-semibold text-slate-900">Reset pairing.</strong> Unlink a partner or leave a Group Pod
+                  at any time from the pairing and pod screens. This immediately revokes the other party’s future access.</span
+                >
+              </li>
+              <li class="flex gap-2.5">
+                <span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-indigo-600"></span>
+                <span
+                  ><strong class="font-semibold text-slate-900">Delete tasks.</strong> Delete individual tasks, archive
+                  completed ones, or clear every task on the device from Settings → Clear / Archive Tasks.</span
+                >
+              </li>
+              <li class="flex gap-2.5">
+                <span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-indigo-600"></span>
+                <span
+                  ><strong class="font-semibold text-slate-900">Revoke permissions.</strong> Withdraw camera, microphone,
+                  geolocation, or notification permissions from your operating system at any time; Vervox degrades
+                  gracefully when they are denied.</span
+                >
+              </li>
+              <li class="flex gap-2.5">
+                <span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-indigo-600"></span>
+                <span
+                  ><strong class="font-semibold text-slate-900">Request assistance.</strong> Contact FabuyoDevs (Section 8)
+                  for help removing data from shared spaces or for any privacy question.</span
+                >
+              </li>
+            </ul>
+            <p class="mt-4 rounded-xl bg-slate-50 p-3 text-[12.5px] leading-relaxed text-slate-600">
+              <strong class="font-semibold text-slate-900">A note on shared data:</strong> if a task was shared with a
+              partner or pod, that party may have already synchronised a copy to their own device. Unlinking stops future
+              sharing; to remove content completely, delete the task before unlinking.
+            </p>
+          </section>
+
+          <!-- 7 -->
+          <section id="terms" class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 class="text-lg font-bold text-slate-900"><span class="mr-2 text-indigo-600">7.</span>Terms of Service</h2>
+            <ul class="mt-4 space-y-2.5 text-[13.5px] leading-relaxed">
+              <li class="flex gap-2.5">
+                <span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-indigo-600"></span>
+                <span
+                  ><strong class="font-semibold text-slate-900">Acceptance.</strong> By installing or using Vervox you agree
+                  to these Terms and to this Privacy Policy. If you do not agree, please discontinue use.</span
+                >
+              </li>
+              <li class="flex gap-2.5">
+                <span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-indigo-600"></span>
+                <span
+                  ><strong class="font-semibold text-slate-900">Eligibility.</strong> Vervox is intended for users aged 13
+                  and above. Younger users should use it with the consent and supervision of a parent or guardian.</span
+                >
+              </li>
+              <li class="flex gap-2.5">
+                <span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-indigo-600"></span>
+                <span
+                  ><strong class="font-semibold text-slate-900">Acceptable use.</strong> Do not use Vervox to store or share
+                  unlawful content, to harass others, to distribute malware, or to attempt to gain unauthorised access to
+                  another person’s tasks, device, or account. Pairing codes and pod invitations are for your own trusted
+                  collaborators only; sharing them publishes your task rows to whoever redeems them.</span
+                >
+              </li>
+              <li class="flex gap-2.5">
+                <span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-indigo-600"></span>
+                <span
+                  ><strong class="font-semibold text-slate-900">Subscriptions &amp; entitlements.</strong> Paid features are
+                  granted for the period purchased. Subscriptions renew according to the terms presented at checkout and can
+                  be managed or cancelled through the payment provider. Tampering with, forging, or redistributing
+                  entitlement records is prohibited.</span
+                >
+              </li>
+              <li class="flex gap-2.5">
+                <span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-indigo-600"></span>
+                <span
+                  ><strong class="font-semibold text-slate-900">Availability &amp; “as is”.</strong> Vervox is provided on an
+                  “as is” and “as available” basis. While we work hard to keep it reliable, offline-first syncing depends on
+                  your device, browser, and network, and we do not warrant uninterrupted operation. You are responsible for
+                  maintaining your own backups of anything critical.</span
+                >
+              </li>
+              <li class="flex gap-2.5">
+                <span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-indigo-600"></span>
+                <span
+                  ><strong class="font-semibold text-slate-900">Limitation of liability.</strong> To the maximum extent
+                  permitted by law, FabuyoDevs is not liable for indirect or consequential loss, or for loss of data arising
+                  from device failure, browser data clearing, revoked permissions, or third-party service outages.</span
+                >
+              </li>
+              <li class="flex gap-2.5">
+                <span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-indigo-600"></span>
+                <span
+                  ><strong class="font-semibold text-slate-900">Changes.</strong> We may update these Terms or this Privacy
+                  Policy. Material changes will be reflected by updating the Effective Date above. Continued use after a
+                  change constitutes acceptance.</span
+                >
+              </li>
+            </ul>
+          </section>
+
+          <!-- 8 -->
+          <section id="contact" class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 class="text-lg font-bold text-slate-900"><span class="mr-2 text-indigo-600">8.</span>Developer Contact</h2>
+            <p class="mt-3 text-[13.5px] leading-relaxed">
+              Vervox is engineered and maintained by <strong class="font-semibold text-slate-900">FabuyoDevs</strong>. For
+              privacy requests, data-deletion assistance, bug reports, or partnership enquiries, please reach us through the
+              official site:
+            </p>
+            <div class="mt-4 flex flex-wrap gap-3">
+              <a
+                href="https://fabuyodevs.vercel.app"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-[13px] font-semibold text-white shadow-sm transition hover:bg-indigo-700"
+              >
+                Visit fabuyodevs.vercel.app
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M7 17 17 7M9 7h8v8" />
+                </svg>
+              </a>
+              <a
+                href="https://fabuyodevs.vercel.app"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-[13px] font-semibold text-slate-700 transition hover:bg-slate-50"
+              >
+                Support &amp; data requests
+              </a>
+            </div>
+            <p class="mt-4 text-[12.5px] leading-relaxed text-slate-500">
+              We aim to acknowledge privacy and data-deletion requests promptly. Because Vervox is accountless, we may ask
+              you to identify the device UUID involved (found in Settings) so we can act on the correct shared workspace.
+            </p>
+          </section>
+
+          <p class="pt-2 text-center text-[12px] text-slate-400">
+            © 2026 Vervox — Engineered &amp; Maintained by
+            <a href="https://fabuyodevs.vercel.app" target="_blank" rel="noopener noreferrer" class="font-semibold text-indigo-600 hover:underline">FabuyoDevs</a>.
+            Effective Date: September 2, 2026.
+          </p>
+        </main>
+      </div>
+    </div>
+
+    <footer class="no-print border-t border-slate-200 bg-white">
+      <div class="mx-auto flex max-w-5xl flex-col items-center justify-between gap-3 px-5 py-6 sm:flex-row">
+        <p class="text-[12px] text-slate-500">Vervox PWA · Privacy Policy &amp; Terms of Service</p>
+        <a
+          href="/index.html"
+          class="rounded-xl bg-slate-100 px-3.5 py-2 text-[12px] font-semibold text-slate-700 transition hover:bg-slate-200"
+          >Back to Vervox</a
+        >
+      </div>
+    </footer>
+  </body>
+</html>

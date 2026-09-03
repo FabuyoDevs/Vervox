@@ -1,0 +1,69 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isAuthenticated() && request.auth.uid == uid;
+    }
+
+    // 1. Tasks: Access restricted to members participating in the task
+    match /tasks/{taskId} {
+      allow read: if isAuthenticated() && request.auth.uid in resource.data.member_uids;
+      allow create: if isAuthenticated() && request.auth.uid in request.resource.data.member_uids;
+      allow update: if isAuthenticated() && request.auth.uid in resource.data.member_uids;
+      allow delete: if isAuthenticated() && request.auth.uid in resource.data.member_uids;
+    }
+
+    // 2. Pairings: 1:1 mutual pairing documents between users
+    match /pairings/{uid} {
+      allow read: if isAuthenticated() && (
+        request.auth.uid == uid ||
+        (resource != null && resource.data.partner_uid == request.auth.uid)
+      );
+      allow create, update: if isAuthenticated() && (
+        request.auth.uid == uid ||
+        request.resource.data.partner_uid == request.auth.uid
+      );
+      allow delete: if isAuthenticated() && (
+        request.auth.uid == uid ||
+        (resource != null && resource.data.partner_uid == request.auth.uid)
+      );
+    }
+
+    // 3. Pair codes: Ephemeral single-use codes (15-min TTL) for pairing & pod invites
+    match /pair_codes/{code} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && request.resource.data.owner_uid == request.auth.uid;
+      allow delete: if isAuthenticated();
+      allow update: if false;
+    }
+
+    // 4. Pods: Shared workspaces for 3–6 members
+    match /pods/{podId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && request.auth.uid in request.resource.data.member_uids;
+      allow update: if isAuthenticated() && (
+        request.auth.uid in resource.data.member_uids ||
+        request.auth.uid in request.resource.data.member_uids
+      );
+      allow delete: if isAuthenticated();
+    }
+
+    // 5. Nudges: Transient notifications sent between partners or pod members
+    match /nudges/{nudgeId} {
+      allow read, create, delete: if isAuthenticated();
+      allow update: if false;
+    }
+
+    // 6. Users: Customer profile, display name, and purchases / entitlements
+    // Note: Server-side webhook updates bypass these rules via Firebase Admin SDK
+    match /users/{uid} {
+      allow read, write: if isOwner(uid);
+    }
+  }
+}

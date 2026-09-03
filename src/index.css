@@ -1,0 +1,155 @@
+@import "tailwindcss";
+
+/* Vervox design tokens — light & bright by default.
+   Overridden per theme (Settings → Preferences → Appearance). */
+:root {
+  --vx-bg: #f8fafc;
+  --vx-bg-alt: #ffffff;
+  --vx-surface: #ffffff;
+  --vx-card: #ffffff;
+  --vx-border: #e2e8f0;
+  --vx-accent: #4f46e5;
+  --vx-accent-2: #10b981;
+  --vx-glow: rgba(79, 70, 229, 0.07);
+  --vx-glow-2: rgba(16, 185, 129, 0.06);
+  --vx-ok: #10b981;
+}
+
+html {
+  background: var(--vx-bg);
+  color-scheme: light;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--vx-accent) 20%, transparent);
+}
+
+@layer components {
+  .vx-surface {
+    background: var(--vx-surface);
+    border-color: var(--vx-border);
+  }
+  .vx-card {
+    background: var(--vx-card);
+    border-color: var(--vx-border);
+  }
+  .vx-accent {
+    color: var(--vx-accent);
+  }
+  .vx-accent-bg {
+    background: var(--vx-accent);
+  }
+  .vx-gradient {
+    background-image: linear-gradient(90deg, var(--vx-accent), var(--vx-accent-2));
+  }
+  .vx-text-gradient {
+    background-image: linear-gradient(90deg, var(--vx-accent), var(--vx-accent-2));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .vx-glow {
+    background-image: radial-gradient(70rem 32rem at 50% -12rem, var(--vx-glow), transparent),
+      radial-gradient(45rem 28rem at 100% 100%, var(--vx-glow-2), transparent);
+  }
+}
+
+/* ── Light-theme compatibility layer ──────────────────────────────────────
+   Sheet/dialog components are built from the shared dark-era utility classes.
+   Scoping the remap to `.vx-sheet` (panels) and `.vx-overlay` (backdrops)
+   restyles them for the bright theme without touching the app shell, which
+   uses the tokens above. Unlayered rules beat Tailwind's utility layer. */
+.vx-overlay {
+  background-color: rgb(15 23 42 / 0.28);
+}
+
+.vx-sheet {
+  background-color: #ffffff;
+  border-color: #e2e8f0;
+  color: #0f172a;
+  box-shadow: 0 25px 50px -20px rgb(15 23 42 / 0.28);
+}
+.vx-sheet [class*="bg-slate-900"] {
+  background-color: #ffffff;
+}
+.vx-sheet [class*="bg-slate-950"] {
+  background-color: #f8fafc;
+}
+.vx-sheet [class*="bg-slate-800"] {
+  background-color: #f1f5f9;
+}
+.vx-sheet [class*="bg-slate-700"] {
+  background-color: #e2e8f0;
+}
+.vx-sheet [class*="text-slate-100"],
+.vx-sheet [class*="text-slate-200"] {
+  color: #0f172a;
+}
+.vx-sheet [class*="text-slate-300"] {
+  color: #334155;
+}
+.vx-sheet [class*="text-slate-400"] {
+  color: #64748b;
+}
+.vx-sheet [class*="border-white/"],
+.vx-sheet [class*="border-white\\/"] {
+  border-color: #e2e8f0;
+}
+.vx-sheet [class*="ring-white/"],
+.vx-sheet [class*="ring-white\\/"] {
+  --tw-ring-color: #e2e8f0;
+}
+.vx-sheet [class*="bg-violet-500"] {
+  background-color: #4f46e5;
+  color: #ffffff;
+}
+.vx-sheet [class*="bg-violet-500/"],
+.vx-sheet [class*="bg-violet-500\\/"] {
+  background-color: #eef2ff;
+  color: #4338ca;
+}
+.vx-sheet [class*="text-violet-"] {
+  color: #4338ca;
+}
+.vx-sheet [class*="bg-emerald-500/"],
+.vx-sheet [class*="bg-emerald-500\\/"] {
+  background-color: #ecfdf5;
+}
+.vx-sheet [class*="text-emerald-300"],
+.vx-sheet [class*="text-emerald-200"] {
+  color: #047857;
+}
+.vx-sheet [class*="bg-rose-500/"],
+.vx-sheet [class*="bg-rose-500\\/"] {
+  background-color: #fff1f2;
+}
+.vx-sheet [class*="text-rose-300"],
+.vx-sheet [class*="text-rose-200"] {
+  color: #be123c;
+}
+.vx-sheet [class*="bg-amber-500/"],
+.vx-sheet [class*="bg-amber-500\\/"] {
+  background-color: #fffbeb;
+}
+.vx-sheet [class*="text-amber-300"],
+.vx-sheet [class*="text-amber-200"] {
+  color: #b45309;
+}
+.vx-sheet [class*="bg-sky-500/"],
+.vx-sheet [class*="bg-sky-500\\/"] {
+  background-color: #f0f9ff;
+}
+.vx-sheet [class*="text-sky-300"],
+.vx-sheet [class*="text-sky-200"] {
+  color: #0369a1;
+}
+.vx-sheet [class*="placeholder:text-slate-600"] {
+  color: #94a3b8;
+}
+.vx-sheet [class*="placeholder:text-slate-500"] {
+  color: #94a3b8;
+}
+
+audio {
+  height: 34px;
+}
