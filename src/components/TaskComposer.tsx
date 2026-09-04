@@ -45,7 +45,7 @@ export default function TaskComposer({ variant, onAdd, onNotify }: Props) {
 
   useEffect(() => () => stopFn.current?.(), []);
 
-  /** Home = toggleable · Today = never · Scheduled = always */
+  /** Home = toggleable. Today = never. Scheduled = always. */
   const showDateTime = variant === "scheduled" || (variant === "all" && scheduleIt);
   const showToggle = variant === "all";
   const parsedLabel = parsed ? describeParsed(parsed) : null;
@@ -158,7 +158,7 @@ export default function TaskComposer({ variant, onAdd, onNotify }: Props) {
   };
 
   const placeholder =
-    variant === "today" ? "Add to today…" : variant === "scheduled" ? "Schedule a task…" : "Add a task…";
+    variant === "today" ? "Add to today..." : variant === "scheduled" ? "Schedule a task..." : "Add a task...";
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-lg shadow-slate-200/60">
@@ -172,7 +172,7 @@ export default function TaskComposer({ variant, onAdd, onNotify }: Props) {
           }}
           onBlur={settleTitle}
           onFocus={() => setOpen(true)}
-          placeholder={listening ? "Listening…" : placeholder}
+          placeholder={listening ? "Listening..." : placeholder}
           className="min-w-0 flex-1 bg-transparent px-1 py-1.5 text-[15px] text-slate-900 outline-none placeholder:text-slate-400"
         />
         <button
@@ -198,9 +198,9 @@ export default function TaskComposer({ variant, onAdd, onNotify }: Props) {
 
       {parsedLabel && (
         <div className="mt-2 flex items-center gap-2 rounded-lg bg-indigo-50 px-2.5 py-1.5 text-[11px] text-indigo-700 ring-1 ring-indigo-200">
-          <span className="shrink-0 font-semibold uppercase tracking-wide">Parsed</span>
+          <span className="shrink-0 font-semibold uppercase tracking-wide">Understood</span>
           <span className="shrink-0 font-semibold">{parsedLabel}</span>
-          <span className="min-w-0 flex-1 truncate text-indigo-500">title → “{parsed?.title.trim() || title}”</span>
+          <span className="min-w-0 flex-1 truncate text-indigo-500">Task name: {parsed?.title.trim() || title}</span>
           <button onClick={clearParsed} className="shrink-0 text-indigo-400 hover:text-indigo-700" aria-label="Clear parsed date">
             ✕
           </button>
@@ -264,7 +264,7 @@ export default function TaskComposer({ variant, onAdd, onNotify }: Props) {
               }`}
             >
               <IconMapPin width={12} height={12} className="mr-1 inline" />
-              {locating ? "Locating…" : location ? "Location tagged" : "Tag location"}
+              {locating ? "Locating..." : location ? "Location tagged" : "Tag location"}
             </button>
             <span className="ml-auto text-[11px]">
               {date > todayKey() ? (

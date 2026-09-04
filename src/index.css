@@ -13,6 +13,7 @@
   --vx-glow: rgba(79, 70, 229, 0.07);
   --vx-glow-2: rgba(16, 185, 129, 0.06);
   --vx-ok: #10b981;
+  --vx-ease: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 html {
@@ -152,4 +153,35 @@ html {
 
 audio {
   height: 34px;
+}
+
+@keyframes vx-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.vx-smooth {
+  transition-duration: 220ms;
+  transition-timing-function: var(--vx-ease);
+}
+
+.vx-toast {
+  animation: vx-toast-in 260ms var(--vx-ease) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 1ms !important;
+  }
 }

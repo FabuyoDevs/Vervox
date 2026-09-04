@@ -395,6 +395,7 @@ export default function App() {
         onClose={() => setPairOpen(false)}
         mode={v.mode}
         deviceId={v.deviceId}
+        uid={v.uid}
         partners={v.partners}
         pairLock={v.pairLock}
         attempts={v.pairAttempts}

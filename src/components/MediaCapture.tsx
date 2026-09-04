@@ -13,7 +13,7 @@ interface Props {
   onUpgrade?: () => void;
 }
 
-export default function MediaCapture({ open, onClose, task, hasAccess, onAttach, onClear, onUpgrade }: Props) {
+export default function MediaCapture({ open, onClose, task, onAttach, onClear }: Props) {
   const [image, setImage] = useState<Blob | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [voice, setVoice] = useState<Blob | null>(null);

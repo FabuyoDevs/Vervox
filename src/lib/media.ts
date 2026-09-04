@@ -7,9 +7,12 @@ const objectUrls = new Map<string, string>();
 
 export const isLocalRef = (url: string | null | undefined): boolean => !!url && url.startsWith("idb:");
 
-/** Turns `idb:<id>` into a usable object URL; https URLs pass straight through. */
+/** Turns `idb:<id>` into a usable object URL; base64 data URLs and https URLs pass straight through. */
 export async function resolveMediaUrl(url: string | null | undefined): Promise<string | null> {
   if (!url) return null;
+  if (url.startsWith("data:") || url.startsWith("http:") || url.startsWith("https:") || url.startsWith("blob:")) {
+    return url;
+  }
   if (!isLocalRef(url)) return url;
   const id = url.slice(4);
   const cached = objectUrls.get(id);
@@ -23,6 +26,66 @@ export async function resolveMediaUrl(url: string | null | undefined): Promise<s
   } catch {
     return null;
   }
+}
+
+/**
+ * Compresses an image file/blob in the browser to a lightweight JPEG data URL (~40–80 KB)
+ * so it can be stored directly inside Firestore task documents with zero cloud storage costs.
+ */
+export async function compressImageToDataUrl(
+  fileOrBlob: Blob | File,
+  maxDimension = 720,
+  quality = 0.68
+): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > maxDimension || height > maxDimension) {
+          if (width > height) {
+            height = Math.round((height * maxDimension) / width);
+            width = maxDimension;
+          } else {
+            width = Math.round((width * maxDimension) / height);
+            height = maxDimension;
+          }
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          resolve(reader.result as string);
+          return;
+        }
+        ctx.drawImage(img, 0, 0, width, height);
+        const dataUrl = canvas.toDataURL("image/jpeg", quality);
+        resolve(dataUrl);
+      };
+      img.onerror = () => reject(new Error("Failed to load image for compression"));
+      img.src = reader.result as string;
+    };
+    reader.onerror = () => reject(new Error("Failed to read image file"));
+    reader.readAsDataURL(fileOrBlob);
+  });
+}
+
+/** Converts an audio blob into a base64 data URL for direct embedding in Firestore documents. */
+export function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      if (typeof reader.result === "string") {
+        resolve(reader.result);
+      } else {
+        reject(new Error("Failed to convert audio blob to base64"));
+      }
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
 }
 
 export const MAX_RECORD_MS = MAX_VOICE_MS;

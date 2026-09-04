@@ -44,7 +44,6 @@ export default function PodSheet({
   onJoin,
   onLeave,
   onInvite,
-  onUpgrade,
   onOpenSecondDevice,
 }: Props) {
   const [tab, setTab] = useState<"mine" | "create" | "join">("mine");

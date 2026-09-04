@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { IconCopy, IconLink, IconX } from "@/components/Icons";
 import { copyText } from "@/lib/utils";
 import type { PairCode } from "@/lib/types";
@@ -9,6 +9,7 @@ interface Props {
   onClose: () => void;
   mode: "firebase" | "local";
   deviceId: string;
+  uid: string | null;
   partners: string[];
   pairLock: number;
   attempts: number;
@@ -28,6 +29,7 @@ export default function PairingModal({
   onClose,
   mode,
   deviceId,
+  uid,
   partners,
   pairLock,
   attempts,
@@ -43,14 +45,12 @@ export default function PairingModal({
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [lockLeft, setLockLeft] = useState(pairLock);
-  const generated = useRef(false);
 
   useEffect(() => {
     if (!open) {
       setCode(null);
       setInput("");
       setError(null);
-      generated.current = false;
     }
   }, [open]);
 
@@ -75,7 +75,6 @@ export default function PairingModal({
       const next = await onGenerate();
       setCode(next);
       setRemaining(next.expires_at - Date.now());
-      generated.current = true;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not create a code.");
     } finally {
@@ -114,7 +113,7 @@ export default function PairingModal({
               Link a partner
             </h2>
             <p className="mt-1 text-[12px] text-slate-400">
-              Zero passwords. One 6-character code, single use, 15-minute expiry.
+              Secure device sign-in, one-time code, 15-minute expiry.
             </p>
           </div>
           <button onClick={onClose} className="rounded-lg p-1 text-slate-400 hover:bg-slate-800 hover:text-slate-200">
@@ -134,6 +133,25 @@ export default function PairingModal({
             </button>
           </div>
         )}
+
+        <div className="mt-4 rounded-xl bg-slate-50 p-3 ring-1 ring-slate-200">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Secure login</p>
+          <div className="mt-2 grid grid-cols-2 gap-2 text-[11px]">
+            <div className="rounded-lg bg-white px-2.5 py-2 ring-1 ring-slate-200">
+              <span className="block text-slate-500">Device</span>
+              <span className="mt-0.5 block truncate font-mono font-semibold text-slate-900">{deviceId.slice(0, 12)}</span>
+            </div>
+            <div className="rounded-lg bg-white px-2.5 py-2 ring-1 ring-slate-200">
+              <span className="block text-slate-500">{mode === "firebase" ? "Firebase auth" : "Local vault"}</span>
+              <span className="mt-0.5 block truncate font-mono font-semibold text-slate-900">
+                {mode === "firebase" ? uid?.slice(0, 12) || "signing in" : "offline ready"}
+              </span>
+            </div>
+          </div>
+          <p className="mt-2 text-[11px] leading-relaxed text-slate-500">
+            Vervox uses a private device identity instead of a public password. Only devices with a valid single-use code can link.
+          </p>
+        </div>
 
         <div className="mt-4 flex gap-1 rounded-xl bg-slate-800 p-1">
           <button

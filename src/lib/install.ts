@@ -5,7 +5,8 @@ export function initAppInstall() {
   initInstallPrompt();
 
   if ("serviceWorker" in navigator) {
-    if (import.meta.env.DEV) {
+    const isDev = ((import.meta as unknown as { env?: { DEV?: boolean } }).env ?? {}).DEV === true;
+    if (isDev) {
       // In local dev, unregister any active worker so it does not intercept Vite HMR WebSockets
       navigator.serviceWorker.getRegistrations().then((registrations) => {
         for (const reg of registrations) {
@@ -24,4 +25,3 @@ export function initAppInstall() {
     }
   }
 }
-

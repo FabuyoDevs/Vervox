@@ -61,6 +61,22 @@ interface Span {
   end: number;
 }
 
+const PLAIN_ENGLISH: Array<[RegExp, string]> = [
+  [/\bu\b/gi, "you"],
+  [/\bur\b/gi, "your"],
+  [/\br\b/gi, "are"],
+  [/\bpls\b|\bplz\b/gi, "please"],
+  [/\basap\b/gi, "as soon as possible"],
+  [/\bmsg\b/gi, "message"],
+  [/\bappt\b/gi, "appointment"],
+  [/\binfo\b/gi, "information"],
+];
+
+const normalizeTitle = (value: string) =>
+  PLAIN_ENGLISH.reduce((next, [pattern, replacement]) => next.replace(pattern, replacement), value)
+    .replace(/\s{2,}/g, " ")
+    .trim();
+
 export function parseTaskInput(raw: string): ParsedTask {
   const source = raw ?? "";
   let date: string | null = null;
@@ -196,7 +212,7 @@ export function parseTaskInput(raw: string): ParsedTask {
 
   const hasTime = matched.includes("time");
   return {
-    title: title || source.trim(),
+    title: normalizeTitle(title || source.trim()),
     date,
     time,
     // An explicit time is an implicit reminder.
@@ -220,7 +236,7 @@ export function describeParsed(parsed: ParsedTask): string | null {
     );
   }
   if (parsed.time) parts.push(parsed.time);
-  return parts.join(" · ");
+  return parts.join(" at ");
 }
 
 export const defaultTime = () => nowTime();

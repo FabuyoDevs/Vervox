@@ -11,7 +11,8 @@
    ------------------------------------------------------------------ */
 import { computeEntitlements, DEFAULT_FREE_PURCHASES, loadPurchases, savePurchases } from "./billing";
 import { envPair } from "./env";
-import { cacheTasks, idbDelete, idbGetAll, idbPut, metaGet, metaSet, putMedia, STORE_MEDIA, STORE_TASKS } from "./idb";
+import { cacheTasks, idbDelete, idbGetAll, idbPut, metaGet, metaSet, STORE_TASKS } from "./idb";
+import { blobToDataUrl, compressImageToDataUrl } from "./media";
 import {
   POD_MAX_MEMBERS,
   type BackendMode,
@@ -46,6 +47,8 @@ export interface Backend {
   uid: string | null;
   /** uid of the paired partner, known after the pairing snapshot lands. */
   partnerUid: string | null;
+  /** Refreshes the current partner UID after pairing or before shared writes. */
+  refreshPartnerUid(): Promise<string | null>;
   subscribeTasks(cb: (tasks: Task[]) => void): () => void;
   subscribePartners(cb: (partners: string[]) => void): () => void;
   upsertTask(task: Task): Promise<void>;
@@ -303,6 +306,11 @@ class LocalBackend implements Backend {
     this.channel?.postMessage({ type });
   }
 
+  async refreshPartnerUid() {
+    this.partnerUid = null;
+    return null;
+  }
+
   subscribeTasks(cb: (tasks: Task[]) => void) {
     this.taskSubs.add(cb);
     void this.emitTasks();
@@ -530,13 +538,14 @@ class LocalBackend implements Backend {
   /* -------------------------- media --------------------------- */
 
   async uploadMedia(blob: Blob, kind: "image" | "voice"): Promise<string> {
-    const id = makeId(kind === "voice" ? "voice" : "proof");
-    await putMedia(id, blob);
-    return `idb:${id}`;
+    if (kind === "image") {
+      return compressImageToDataUrl(blob);
+    }
+    return blobToDataUrl(blob);
   }
 
-  async deleteMedia(url: string) {
-    if (url.startsWith("idb:")) await idbDelete(STORE_MEDIA, url.slice(4));
+  async deleteMedia(_url: string) {
+    /* Embedded in task document; clearing field removes it */
   }
 }
 
@@ -546,18 +555,16 @@ class LocalBackend implements Backend {
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 async function loadFirebase(cfg: FirebaseConfig) {
-  const [appMod, authMod, fsMod, stMod] = await Promise.all([
+  const [appMod, authMod, fsMod] = await Promise.all([
     import(/* @vite-ignore */ cdn("app")),
     import(/* @vite-ignore */ cdn("auth")),
     import(/* @vite-ignore */ cdn("firestore")),
-    import(/* @vite-ignore */ cdn("storage")),
   ]);
   const app = appMod.initializeApp(cfg);
   const auth = authMod.getAuth(app);
   if (!auth.currentUser) await authMod.signInAnonymously(auth);
   const db = fsMod.getFirestore(app);
-  const storage = stMod.getStorage(app);
-  return { auth, db, fs: fsMod, st: stMod, storage, authMod };
+  return { auth, db, fs: fsMod, authMod };
 }
 
 const toMillis = (v: unknown): number => {
@@ -577,15 +584,13 @@ class FirebaseBackend implements Backend {
     public deviceId: string,
     private db: any,
     private fs: any,
-    private st: any,
-    private storage: any,
     uid: string
   ) {
     this.uid = uid;
   }
 
   static async create(deviceId: string, cfg: FirebaseConfig): Promise<FirebaseBackend> {
-    const { db, fs, st, storage, auth } = await loadFirebase(cfg);
+    const { db, fs, auth } = await loadFirebase(cfg);
     const uid: string = auth.currentUser?.uid ?? `anon:${deviceId}`;
     try {
       await fs.setDoc(
@@ -601,7 +606,7 @@ class FirebaseBackend implements Backend {
     } catch (err) {
       console.warn("[vervox] user profile init warning", err);
     }
-    return new FirebaseBackend(deviceId, db, fs, st, storage, uid);
+    return new FirebaseBackend(deviceId, db, fs, uid);
   }
 
   private taskRef(id: string) {
@@ -609,12 +614,27 @@ class FirebaseBackend implements Backend {
   }
 
   private strip(task: Task) {
+    const member_uids = Array.from(new Set([this.uid, ...(task.member_uids ?? [])].filter(Boolean) as string[]));
     return {
       ...task,
+      member_uids,
       created_at: this.fs.Timestamp.fromMillis(task.created_at || Date.now()),
       updated_at: this.fs.Timestamp.fromMillis(task.updated_at || Date.now()),
       completed_at: task.completed_at ? this.fs.Timestamp.fromMillis(task.completed_at) : null,
     };
+  }
+
+  async refreshPartnerUid(): Promise<string | null> {
+    if (!this.uid) return null;
+    try {
+      const snap = await this.fs.getDoc(this.fs.doc(this.db, "pairings", this.uid));
+      const data = snap.data() as { partner_uid?: string | null } | undefined;
+      this.partnerUid = data?.partner_uid ?? null;
+      return this.partnerUid;
+    } catch (err) {
+      console.warn("[vervox] partner uid refresh failed", err);
+      return this.partnerUid;
+    }
   }
 
   subscribeTasks(cb: (tasks: Task[]) => void) {
@@ -660,11 +680,13 @@ class FirebaseBackend implements Backend {
   }
 
   async upsertTask(task: Task) {
+    task.member_uids = Array.from(new Set([this.uid!, ...(task.member_uids ?? [])].filter(Boolean)));
     await this.fs.setDoc(this.taskRef(task.task_id), this.strip(task));
   }
 
   async patchTask(id: string, patch: Partial<Task>) {
     const next: Record<string, unknown> = { ...patch, updated_at: this.fs.Timestamp.fromMillis(Date.now()) };
+    if (patch.member_uids) next.member_uids = Array.from(new Set([this.uid!, ...patch.member_uids].filter(Boolean)));
     if (patch.completed_at !== undefined) {
       next.completed_at = patch.completed_at ? this.fs.Timestamp.fromMillis(patch.completed_at) : null;
     }
@@ -762,6 +784,7 @@ class FirebaseBackend implements Backend {
       partner_uid: data.owner_uid ?? null,
       since: now,
     });
+    this.partnerUid = data.owner_uid ?? null;
     if (data.owner_uid) {
       await this.fs.setDoc(this.fs.doc(this.db, "pairings", data.owner_uid), {
         partner_device: this.deviceId,
@@ -904,21 +927,14 @@ class FirebaseBackend implements Backend {
   /* -------------------------- media --------------------------- */
 
   async uploadMedia(blob: Blob, kind: "image" | "voice"): Promise<string> {
-    const ext = kind === "voice" ? "webm" : "jpg";
-    const path = `media/${this.uid}/${makeId(kind)}.${ext}`;
-    const ref = this.st.ref(this.storage, path);
-    await this.st.uploadBytes(ref, blob, {
-      contentType: blob.type || (kind === "voice" ? "audio/webm" : "image/jpeg"),
-    });
-    return (await this.st.getDownloadURL(ref)) as string;
+    if (kind === "image") {
+      return compressImageToDataUrl(blob);
+    }
+    return blobToDataUrl(blob);
   }
 
-  async deleteMedia(url: string) {
-    try {
-      await this.st.deleteObject(this.st.ref(this.storage, url));
-    } catch {
-      /* already gone */
-    }
+  async deleteMedia(_url: string) {
+    /* Base64 data URLs are embedded directly in Firestore documents; clearing the field removes it */
   }
 }
 

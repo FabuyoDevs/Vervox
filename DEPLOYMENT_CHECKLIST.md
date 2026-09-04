@@ -104,24 +104,10 @@ service cloud.firestore {
 }
 ```
 
-#### B. Firebase Storage Rules
-In Firebase Console → Storage → **Rules**, paste:
-```javascript
-rules_version = '2';
-service firebase.storage {
-  match /b/{bucket}/o {
-    match /media/{uid}/{allPaths=**} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null
-                   && request.auth.uid == uid
-                   && request.resource.size < 25 * 1024 * 1024
-                   && (request.resource.contentType.matches('image/.*')
-                       || request.resource.contentType.matches('audio/.*'));
-      allow delete: if request.auth != null && request.auth.uid == uid;
-    }
-  }
-}
-```
+#### B. Firebase Storage: NOT REQUIRED (Zero Cost Base64 Embedded Media)
+> **Note**: Vervox automatically compresses photo proofs (max 720px JPEG ~40-80 KB) and 15-second voice notes (~40-60 KB) into lightweight Base64 Data URLs stored directly inside Firestore task documents.
+> 
+> **You do NOT need to enable Firebase Storage or pay for storage buckets.** The app runs 100% free within Firestore's generous free tier (Spark plan) with zero credit card required!
 
 #### C. Firestore Composite Index
 In Firebase Console → Firestore Database → **Indexes** → **Composite Indexes** → **Add Index**:

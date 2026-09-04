@@ -11,15 +11,9 @@ import {
   secondDeviceUrl,
   type Backend,
 } from "@/lib/backend";
-import {
-  CATALOG,
-  computeEntitlements,
-  loadPurchases,
-  recordPurchase,
-  type CheckoutResult,
-} from "@/lib/billing";
+import { computeEntitlements, loadPurchases, recordPurchase, type CheckoutResult } from "@/lib/billing";
 import { DEFAULT_CURRENCY, detectCurrency, storedCurrency, type Currency } from "@/lib/geo";
-import { idbGetAll, idbPut, STORE_ARCHIVE } from "@/lib/idb";
+import { idbDelete, idbGetAll, idbPut, STORE_ARCHIVE, STORE_TASKS } from "@/lib/idb";
 import { enqueue, flushQueue, queueSize, type SyncTarget } from "@/lib/syncQueue";
 import { fireLocalNotification, notificationsEnabled } from "@/lib/pwa";
 import { playAlarm, playCompleteChime, playDeleteChime, playNudge, playPairChime, playUndoChime, setChimePack } from "@/lib/audio";
@@ -100,10 +94,10 @@ export function useVervox(initialView: AppView = "all") {
   const dismissToast = useCallback((id: string) => setToasts((t) => t.filter((x) => x.id !== id)), []);
 
   const pushToast = useCallback(
-    (message: string, tone: Toast["tone"] = "info", action?: Toast["action"], ttl = 4500) => {
+    (message: string, tone: Toast["tone"] = "info", action?: Toast["action"], ttl = 8000) => {
       const id = makeId("toast");
       setToasts((t) => [...t.slice(-2), { id, message, tone, action }]);
-      window.setTimeout(() => dismissToast(id), action ? 7000 : ttl);
+      window.setTimeout(() => dismissToast(id), action ? 12000 : ttl);
     },
     [dismissToast]
   );
@@ -123,6 +117,12 @@ export function useVervox(initialView: AppView = "all") {
       setName(displayName(id));
       setPurchases(loadPurchases());
       setReady(true);
+      try {
+        const cached = await idbGetAll<Task>(STORE_TASKS);
+        if (cached.length) setTasks(sortTasks(cached.filter((t) => t.assigned_to?.includes(id))));
+      } catch {
+        /* ignore */
+      }
       cleanups.push(backend.subscribeTasks((next) => setTasks(sortTasks(next))));
       cleanups.push(backend.subscribePartners((next) => setPartners(next)));
       cleanups.push(backend.subscribePods((next) => setPods(next)));
@@ -247,10 +247,11 @@ export function useVervox(initialView: AppView = "all") {
   }, []);
 
   const runOrQueue = useCallback(
-    async (perform: (t: SyncTarget) => Promise<void>, fallback: () => Promise<void>) => {
+    async (perform: (t: SyncTarget) => Promise<void>, fallback: () => Promise<void>, optimistic?: () => void) => {
       const target = asTarget();
       if (!target || !navigator.onLine) {
         await fallback();
+        optimistic?.();
         setPending(await queueSize());
         return;
       }
@@ -259,16 +260,19 @@ export function useVervox(initialView: AppView = "all") {
       } catch (err) {
         console.warn("[vervox] write failed, queuing", err);
         await fallback();
+        optimistic?.();
         setPending(await queueSize());
+        pushToast("Saved locally. Cloud sync will retry when Firebase is reachable.", "info", undefined, 9000);
       }
     },
-    [asTarget]
+    [asTarget, pushToast]
   );
 
   const addTask = useCallback(
     async (input: NewTaskInput) => {
       const b = backendRef.current;
       if (!b || !input.title.trim()) return;
+      await b.refreshPartnerUid();
       const assigned = Array.from(new Set([b.deviceId, ...shareTargets.map((t) => t.device_id)])).slice(0, 6);
       const derived: ViewType = input.schedule && input.schedule.date > todayKey() ? "scheduled" : "today";
       const task: Task = {
@@ -294,7 +298,11 @@ export function useVervox(initialView: AppView = "all") {
       };
       await runOrQueue(
         (t) => t.upsertTask(task),
-        () => enqueue({ kind: "upsert", task }).then(() => undefined)
+        async () => {
+          await idbPut(STORE_TASKS, task);
+          await enqueue({ kind: "upsert", task });
+        },
+        () => setTasks((prev) => sortTasks([...prev.filter((t) => t.task_id !== task.task_id), task]))
       );
       return task;
     },
@@ -305,7 +313,12 @@ export function useVervox(initialView: AppView = "all") {
     async (id: string, patch: Partial<Task>) => {
       await runOrQueue(
         (t) => t.patchTask(id, patch),
-        () => enqueue({ kind: "patch", id, patch }).then(() => undefined)
+        async () => {
+          const current = tasksRef.current.find((t) => t.task_id === id);
+          if (current) await idbPut(STORE_TASKS, { ...current, ...patch, updated_at: Date.now() });
+          await enqueue({ kind: "patch", id, patch });
+        },
+        () => setTasks((prev) => sortTasks(prev.map((t) => (t.task_id === id ? { ...t, ...patch, updated_at: Date.now() } : t))))
       );
     },
     [runOrQueue]
@@ -345,7 +358,11 @@ export function useVervox(initialView: AppView = "all") {
       if (!b) return;
       await runOrQueue(
         (t) => t.deleteTask(task.task_id),
-        () => enqueue({ kind: "delete", id: task.task_id }).then(() => undefined)
+        async () => {
+          await idbDelete(STORE_TASKS, task.task_id);
+          await enqueue({ kind: "delete", id: task.task_id });
+        },
+        () => setTasks((prev) => prev.filter((t) => t.task_id !== task.task_id))
       );
       playDeleteChime();
       pushToast(`Deleted — ${task.title}`, "danger", {
@@ -755,6 +772,7 @@ export function useVervox(initialView: AppView = "all") {
     updateName,
     openSecondDevice,
     buy,
+    updateUserTier,
     restorePurchases,
     setThemeId,
     setChimeId,

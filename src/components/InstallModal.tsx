@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { IconCheck, IconCloud, IconDownload, IconSmartphone, IconX } from "@/components/Icons";
+import { IconCheck, IconDownload, IconSmartphone, IconX } from "@/components/Icons";
 import { usePwaInstall } from "@/lib/pwa";
 
 const DISMISS_KEY = "vervox:install-modal-dismissed";

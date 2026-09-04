@@ -11,7 +11,7 @@ export default function Toasts({ toasts, onDismiss }: Props) {
       {toasts.map((t) => (
         <div
           key={t.id}
-          className={`pointer-events-auto flex items-center gap-3 rounded-xl px-3.5 py-2.5 shadow-lg shadow-slate-900/10 backdrop-blur-md ${
+          className={`vx-toast pointer-events-auto flex items-center gap-3 rounded-xl px-3.5 py-2.5 shadow-lg shadow-slate-900/10 backdrop-blur-md ${
             t.tone === "success"
               ? "bg-emerald-600 text-white"
               : t.tone === "danger"

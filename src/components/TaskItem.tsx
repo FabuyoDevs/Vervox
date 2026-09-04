@@ -270,7 +270,7 @@ export default function TaskItem({
       onTouchMove={moveSwipe}
       onTouchEnd={endSwipe}
       style={{ touchAction: "pan-y", transform: dragX ? `translateX(${dragX}px)` : undefined }}
-      className={`group relative select-none rounded-2xl border bg-white p-3 shadow-sm transition active:scale-[0.99] ${
+      className={`vx-smooth group relative select-none rounded-2xl border bg-white p-3 shadow-sm transition active:scale-[0.99] ${
         task.is_completed ? "border-emerald-100 bg-emerald-50/50" : "border-slate-200 hover:border-indigo-300"
       } ${expanded ? "ring-2 ring-indigo-200" : ""}`}
     >

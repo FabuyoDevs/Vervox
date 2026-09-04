@@ -7,9 +7,8 @@
    read from environment variables only. With no key configured, a clearly
    labelled sandbox receipt is issued so the flow stays testable.
    ------------------------------------------------------------------ */
-import { envPair } from "./env";
 import { DEFAULT_CURRENCY, type Currency } from "./geo";
-import type { Entitlements, Purchase, SkuId, Tier } from "./types";
+import type { Entitlements, Purchase, SkuId } from "./types";
 
 export type { Currency };
 
@@ -104,7 +103,6 @@ export const priceLabel = (sku: Sku, currency: Currency = currentCurrency()) =>
 /* ------------------------- Entitlements ------------------------- */
 
 const LS_PURCHASES = "vervox:purchases";
-const MONTH_MS = 30 * 24 * 60 * 60 * 1000;
 export const SUBSCRIPTION_SKUS: SkuId[] = ["cloud_media", "pro_bundle"];
 
 export const DEFAULT_FREE_PURCHASES: Purchase[] = [
