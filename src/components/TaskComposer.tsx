@@ -5,7 +5,7 @@ import { describeParsed, parseTaskInput, type ParsedTask } from "@/lib/nlp";
 import { requestNotificationPermission } from "@/lib/pwa";
 import { addDays, nowTime, todayKey } from "@/lib/utils";
 import { playUndoChime } from "@/lib/audio";
-import type { AppView, Priority } from "@/lib/types";
+import type { AppView, Pod, Priority, TaskScope } from "@/lib/types";
 import type { NewTaskInput } from "@/hooks/useVervox";
 
 interface Props {
@@ -13,12 +13,18 @@ interface Props {
   variant: AppView;
   onAdd: (input: NewTaskInput) => Promise<unknown>;
   onNotify: (message: string, tone?: "info" | "success" | "danger") => void;
+  activePod?: Pod | null;
+  pods?: Pod[];
+  partnerAvailable?: boolean;
 }
 
 const PRIORITIES: Priority[] = ["low", "normal", "high"];
 
-export default function TaskComposer({ variant, onAdd, onNotify }: Props) {
+export default function TaskComposer({ variant, onAdd, onNotify, activePod, pods = [], partnerAvailable = false }: Props) {
   const [title, setTitle] = useState("");
+  const [podTag, setPodTag] = useState<string>("@All");
+  const [scope, setScope] = useState<TaskScope>("personal");
+  const [selectedPodId, setSelectedPodId] = useState("");
   const [scheduleIt, setScheduleIt] = useState(false);
   const [date, setDate] = useState(todayKey());
   const [time, setTime] = useState(nowTime());
@@ -41,7 +47,9 @@ export default function TaskComposer({ variant, onAdd, onNotify }: Props) {
     setAlarm(false);
     setLocation(null);
     setOpen(variant === "scheduled");
-  }, [variant]);
+    setScope("personal");
+    setSelectedPodId(pods[0]?.pod_id ?? "");
+  }, [pods, variant]);
 
   useEffect(() => () => stopFn.current?.(), []);
 
@@ -93,6 +101,9 @@ export default function TaskComposer({ variant, onAdd, onNotify }: Props) {
       schedule,
       location,
       priority,
+      scope,
+      pod_id: scope === "pod" ? selectedPodId || activePod?.pod_id : null,
+      tagged_members: scope === "pod" ? [podTag] : [],
     });
     playUndoChime();
     setTitle("");
@@ -196,6 +207,40 @@ export default function TaskComposer({ variant, onAdd, onNotify }: Props) {
         </button>
       </div>
 
+      {(open || variant !== "all") && (
+        <label className="mt-3 flex items-center justify-between gap-3 border-t border-slate-100 pt-3 text-[12px] font-semibold text-slate-700">
+          <span>Share target</span>
+          <select
+            value={scope}
+            onChange={(e) => {
+              const value = e.target.value;
+              if (value.startsWith("pod:")) {
+                setScope("pod");
+                setSelectedPodId(value.slice(4));
+              } else {
+                setScope(value as TaskScope);
+              }
+            }}
+            className="max-w-[70%] rounded-lg bg-slate-50 px-2.5 py-1.5 text-[11px] font-semibold text-slate-700 outline-none ring-1 ring-slate-200 focus:ring-indigo-400"
+          >
+            <option value="personal">Personal (Only Me)</option>
+            <option value="partner" disabled={!partnerAvailable}>Send to Partner{partnerAvailable ? "" : " (not paired)"}</option>
+            {pods.map((pod) => (
+              <option key={pod.pod_id} value={`pod:${pod.pod_id}`}>Send to Pod: {pod.name}</option>
+            ))}
+          </select>
+        </label>
+      )}
+
+      {scope === "pod" && pods.length > 0 && (
+        <label className="mt-2 flex items-center justify-between gap-3 text-[11px] text-violet-800">
+          <span>Pod workspace</span>
+          <select value={selectedPodId} onChange={(e) => setSelectedPodId(e.target.value)} className="rounded-lg bg-violet-50 px-2 py-1 font-semibold ring-1 ring-violet-200">
+            {pods.map((pod) => <option key={pod.pod_id} value={pod.pod_id}>{pod.name}</option>)}
+          </select>
+        </label>
+      )}
+
       {parsedLabel && (
         <div className="mt-2 flex items-center gap-2 rounded-lg bg-indigo-50 px-2.5 py-1.5 text-[11px] text-indigo-700 ring-1 ring-indigo-200">
           <span className="shrink-0 font-semibold uppercase tracking-wide">Understood</span>
@@ -276,6 +321,27 @@ export default function TaskComposer({ variant, onAdd, onNotify }: Props) {
               )}
             </span>
           </div>
+        </div>
+      )}
+
+      {activePod && (
+        <div className="mt-3 flex items-center justify-between rounded-xl bg-violet-50/80 px-3 py-2 ring-1 ring-violet-200/70">
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs">🏷️</span>
+            <span className="text-[11.5px] font-semibold text-violet-900">Tag in {activePod.name}:</span>
+          </div>
+          <select
+            value={podTag}
+            onChange={(e) => setPodTag(e.target.value)}
+            className="rounded-lg border-0 bg-white px-2.5 py-1 text-[11px] font-bold text-violet-700 shadow-sm outline-none ring-1 ring-violet-200 focus:ring-2 focus:ring-violet-400"
+          >
+            <option value="@All">📢 @All Members</option>
+            {activePod.members.map((m) => (
+              <option key={m.device_id} value={`@${m.name || "Member"}`}>
+                👤 @{m.name || "Member"}
+              </option>
+            ))}
+          </select>
         </div>
       )}
 

@@ -1,8 +1,46 @@
 {
   "indexes": [
     {
+      "collectionGroup": "tasks",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "scope", "order": "ASCENDING" },
+        { "fieldPath": "creator_id", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "tasks",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "scope", "order": "ASCENDING" },
+        { "fieldPath": "partner_uids", "arrayConfig": "CONTAINS" }
+      ]
+    },
+    {
+      "collectionGroup": "tasks",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "scope", "order": "ASCENDING" },
+        { "fieldPath": "pod_member_uids", "arrayConfig": "CONTAINS" }
+      ]
+    },
+    {
       "collectionGroup": "nudges",
       "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "to",
+          "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "created_at",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "nudges",
+      "queryScope": "COLLECTION_GROUP",
       "fields": [
         {
           "fieldPath": "to",

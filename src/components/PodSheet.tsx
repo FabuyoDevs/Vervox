@@ -176,7 +176,7 @@ export default function PodSheet({
                     {pod.members.map((m) => (
                       <span
                         key={m.device_id}
-                        title={m.device_id}
+                        title={m.name}
                         className={`flex items-center gap-1.5 rounded-full px-2 py-1 text-[11px] font-semibold ${
                           m.device_id === deviceId ? "bg-violet-500/20 text-violet-200" : "bg-slate-800 text-slate-300"
                         }`}
@@ -278,7 +278,7 @@ export default function PodSheet({
           <button onClick={onOpenSecondDevice} className="text-[11px] font-semibold text-slate-400 hover:text-slate-200">
             Open a simulated device
           </button>
-          <p className="truncate text-[10px] text-slate-600">{deviceId.slice(0, 8)}</p>
+          <p className="truncate text-[10px] text-slate-500">Hardware Bound</p>
         </div>
       </div>
     </div>

@@ -18,8 +18,9 @@ import { enqueue, flushQueue, queueSize, type SyncTarget } from "@/lib/syncQueue
 import { fireLocalNotification, notificationsEnabled } from "@/lib/pwa";
 import { playAlarm, playCompleteChime, playDeleteChime, playNudge, playPairChime, playUndoChime, setChimePack } from "@/lib/audio";
 import { applyTheme, CHIME_PACKS, setChime, storedChime, storedTheme, THEMES } from "@/lib/themes";
-import type { AppView, Entitlements, Nudge, Pod, Priority, Purchase, SkuId, Task, ViewType } from "@/lib/types";
+import type { AppView, Entitlements, Nudge, Pod, Priority, Purchase, SkuId, Task, TaskScope, ViewType } from "@/lib/types";
 import { deviceUuid, inQuietHours, loadQuietHours, nowTime, progressOf, sortByDateTime, sortTasks, todayKey, uid as makeId } from "@/lib/utils";
+import { resolveSecureVault } from "@/lib/vault";
 
 export interface Toast {
   id: string;
@@ -36,6 +37,12 @@ export interface NewTaskInput {
   schedule: { has_alarm: boolean; date: string; time: string } | null;
   location: { lat: number; lng: number; label?: string } | null;
   priority: Priority;
+  scope?: TaskScope;
+  partner_pair_id?: string | null;
+  partner_uids?: string[];
+  pod_id?: string | null;
+  pod_member_uids?: string[];
+  tagged_members?: string[];
 }
 
 export interface ShareTarget {
@@ -43,6 +50,8 @@ export interface ShareTarget {
   uid: string | null;
   name: string;
 }
+
+const pairId = (left: string, right: string) => [left, right].sort().join(":");
 
 const EMPTY_MEDIA: Task["media"] = {
   proof_image_url: null,
@@ -68,6 +77,7 @@ export function useVervox(initialView: AppView = "all") {
   const [themeId, setThemeId] = useState(storedTheme());
   const [chimeId, setChimeId] = useState(storedChime());
   const [name, setName] = useState("");
+  const [usernameLocked, setUsernameLocked] = useState(false);
   const [currency, setCurrency] = useState<Currency>(storedCurrency() ?? DEFAULT_CURRENCY);
   const [online, setOnline] = useState<boolean>(typeof navigator !== "undefined" ? navigator.onLine : true);
   const [pending, setPending] = useState<number>(0);
@@ -114,7 +124,9 @@ export function useVervox(initialView: AppView = "all") {
       setDeviceId(id);
       setMode(backend.mode);
       setUid(backend.uid);
-      setName(displayName(id));
+      const vault = await resolveSecureVault();
+      setUsernameLocked(vault.username_locked);
+      setName(vault.username || displayName(id));
       setPurchases(loadPurchases());
       setReady(true);
       try {
@@ -136,9 +148,14 @@ export function useVervox(initialView: AppView = "all") {
           const welcome: Task = {
             task_id: makeId("task"),
             title: "Tap ✓ to complete your first task!",
+            scope: "personal",
+            creator_id: backend.uid || id,
+            creator_username: vault.username || displayName(id) || "You",
+            creator_hardware_id: id,
             created_by: id,
-            created_by_name: null,
+            created_by_name: vault.username || displayName(id) || null,
             assigned_to: [id],
+            tagged_members: [],
             member_uids: [backend.uid].filter(Boolean) as string[],
             pod_id: null,
             is_completed: false,
@@ -273,18 +290,41 @@ export function useVervox(initialView: AppView = "all") {
       const b = backendRef.current;
       if (!b || !input.title.trim()) return;
       await b.refreshPartnerUid();
-      const assigned = Array.from(new Set([b.deviceId, ...shareTargets.map((t) => t.device_id)])).slice(0, 6);
+      const scope = input.scope ?? "personal";
+      const selectedPod = input.pod_id ? pods.find((pod) => pod.pod_id === input.pod_id) : undefined;
+      const selectedPartnerUid = b.partnerUid;
+      const selectedPartnerDevice = partners.find((id) => id !== b.deviceId);
+      const assigned = scope === "personal"
+        ? [b.deviceId]
+        : scope === "partner"
+          ? Array.from(new Set([b.deviceId, selectedPartnerDevice].filter(Boolean) as string[]))
+          : Array.from(new Set([b.deviceId, ...(selectedPod?.members.map((member) => member.device_id) ?? [])])).slice(0, 6);
+      const selectedPartnerUids = scope === "partner"
+        ? Array.from(new Set([b.uid, selectedPartnerUid].filter(Boolean) as string[]))
+        : [];
+      const selectedPodUids = scope === "pod"
+        ? Array.from(new Set(selectedPod?.members.map((member) => member.uid).filter(Boolean) as string[] ?? []))
+        : [];
       const derived: ViewType = input.schedule && input.schedule.date > todayKey() ? "scheduled" : "today";
       const task: Task = {
         task_id: makeId("task"),
         title: input.title.trim(),
+        scope,
+        creator_id: b.uid || b.deviceId,
+        creator_username: name || "User",
+        creator_hardware_id: b.deviceId,
         created_by: b.deviceId,
         created_by_name: name || null,
         assigned_to: assigned,
-        member_uids: memberUids(),
-        pod_id: pods[0]?.pod_id ?? null,
+        tagged_members: input.tagged_members ?? [],
+        member_uids: scope === "personal" ? (b.uid ? [b.uid] : []) : scope === "partner" ? selectedPartnerUids : selectedPodUids,
+        partner_pair_id: scope === "partner" && selectedPartnerDevice ? pairId(b.deviceId, selectedPartnerDevice) : null,
+        partner_uids: selectedPartnerUids,
+        pod_id: scope === "pod" ? input.pod_id ?? null : null,
+        pod_member_uids: selectedPodUids,
         is_completed: false,
         completed_by: null,
+        completed_by_name: null,
         completed_at: null,
         view_type: input.forceView ?? (input.schedule ? derived : (input.view_type ?? "today")),
         schedule: input.schedule,
@@ -306,7 +346,7 @@ export function useVervox(initialView: AppView = "all") {
       );
       return task;
     },
-    [memberUids, name, pods, runOrQueue, shareTargets]
+    [name, partners, pods, runOrQueue]
   );
 
   const patchTask = useCallback(
@@ -332,6 +372,7 @@ export function useVervox(initialView: AppView = "all") {
       const patch: Partial<Task> = {
         is_completed: next,
         completed_by: next ? b.deviceId : null,
+        completed_by_name: next ? (name || "Partner") : null,
         completed_at: next ? Date.now() : null,
       };
       await runOrQueue(
@@ -744,6 +785,8 @@ export function useVervox(initialView: AppView = "all") {
     today,
     themeId,
     chimeId,
+    usernameLocked,
+    partnerName: partners[0] ? (displayName(partners[0]) || "Partner") : null,
     themes: THEMES,
     chimes: CHIME_PACKS,
     view: initialView,

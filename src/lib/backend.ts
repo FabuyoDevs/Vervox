@@ -13,6 +13,7 @@ import { computeEntitlements, DEFAULT_FREE_PURCHASES, loadPurchases, savePurchas
 import { envPair } from "./env";
 import { cacheTasks, idbDelete, idbGetAll, idbPut, metaGet, metaSet, STORE_TASKS } from "./idb";
 import { blobToDataUrl, compressImageToDataUrl } from "./media";
+import { resolveHardwareId, setLockedUsername } from "./vault";
 import {
   POD_MAX_MEMBERS,
   type BackendMode,
@@ -121,7 +122,7 @@ export async function resolveDeviceId(): Promise<string> {
       const key = `vervox:device:${as}`;
       let id = sessionStorage.getItem(key);
       if (!id) {
-        id = deviceUuid();
+        id = `hw_${deviceUuid()}`;
         sessionStorage.setItem(key, id);
       }
       return id;
@@ -129,16 +130,7 @@ export async function resolveDeviceId(): Promise<string> {
   } catch {
     /* sessionStorage blocked */
   }
-  try {
-    let id = await metaGet<string>("device_id");
-    if (!id) {
-      id = deviceUuid();
-      await metaSet("device_id", id);
-    }
-    return id;
-  } catch {
-    return deviceUuid();
-  }
+  return resolveHardwareId();
 }
 
 export function secondDeviceUrl(): string {
@@ -223,7 +215,20 @@ const LS_PODS = "vervox:pods";
 const myPodsKey = (deviceId: string) => `vervox:mypods:${deviceId}`;
 const nameKey = (deviceId: string) => `vervox:name:${deviceId}`;
 
-export const displayName = (deviceId: string) => localStorage.getItem(nameKey(deviceId)) ?? "";
+export const displayName = (deviceId: string): string => {
+  try {
+    const rawVault = localStorage.getItem("sys_secure_vault");
+    if (rawVault) {
+      const parsed = JSON.parse(rawVault);
+      if (parsed.vervox_hardware_id === deviceId && parsed.username) {
+        return parsed.username;
+      }
+    }
+  } catch {
+    /* ignore */
+  }
+  return localStorage.getItem(nameKey(deviceId)) ?? "";
+};
 
 const readPods = (): Record<string, Pod> => {
   try {
@@ -292,7 +297,9 @@ class LocalBackend implements Backend {
     } catch {
       tasks = [];
     }
-    const visible = tasks.filter((t) => t.assigned_to?.includes(this.deviceId));
+    const visible = tasks
+      .filter((t) => t.assigned_to?.includes(this.deviceId))
+      .map((t) => ({ scope: "personal" as const, ...t }));
     void cacheTasks(visible);
     this.taskSubs.forEach((cb) => cb(visible));
   }
@@ -324,7 +331,13 @@ class LocalBackend implements Backend {
   }
 
   async upsertTask(task: Task) {
-    await idbPut(STORE_TASKS, task);
+    const fullTask: Task = {
+      ...task,
+      creator_id: task.creator_id || this.deviceId,
+      creator_username: task.creator_username || displayName(this.deviceId) || "User",
+      creator_hardware_id: task.creator_hardware_id || this.deviceId,
+    };
+    await idbPut(STORE_TASKS, fullTask);
     this.broadcast("tasks");
     await this.emitTasks();
   }
@@ -438,6 +451,7 @@ class LocalBackend implements Backend {
   }
 
   async setDisplayName(name: string) {
+    await setLockedUsername(name);
     localStorage.setItem(nameKey(this.deviceId), name);
     const pods = readPods();
     let changed = false;
@@ -592,13 +606,25 @@ class FirebaseBackend implements Backend {
   static async create(deviceId: string, cfg: FirebaseConfig): Promise<FirebaseBackend> {
     const { db, fs, auth } = await loadFirebase(cfg);
     const uid: string = auth.currentUser?.uid ?? `anon:${deviceId}`;
+    const userDocRef = fs.doc(db, "users", uid);
+    let remoteUsername: string | null = null;
     try {
+      const userSnap = await fs.getDoc(userDocRef);
+      if (userSnap.exists()) {
+        const uData = userSnap.data();
+        if (uData?.username) {
+          remoteUsername = uData.username;
+          await setLockedUsername(remoteUsername);
+        }
+      }
       await fs.setDoc(
-        fs.doc(db, "users", uid),
+        userDocRef,
         {
           tier: "pro",
           purchases: DEFAULT_FREE_PURCHASES,
           device_id: deviceId,
+          vervox_hardware_id: deviceId,
+          ...(remoteUsername ? { username: remoteUsername, display_name: remoteUsername, username_locked: true } : {}),
           updated_at: fs.Timestamp.fromMillis(Date.now()),
         },
         { merge: true }
@@ -617,6 +643,10 @@ class FirebaseBackend implements Backend {
     const member_uids = Array.from(new Set([this.uid, ...(task.member_uids ?? [])].filter(Boolean) as string[]));
     return {
       ...task,
+      scope: task.scope || "personal",
+      creator_id: task.creator_id || this.uid,
+      creator_username: task.creator_username || displayName(this.deviceId) || "User",
+      creator_hardware_id: task.creator_hardware_id || this.deviceId,
       member_uids,
       created_at: this.fs.Timestamp.fromMillis(task.created_at || Date.now()),
       updated_at: this.fs.Timestamp.fromMillis(task.updated_at || Date.now()),
@@ -638,17 +668,13 @@ class FirebaseBackend implements Backend {
   }
 
   subscribeTasks(cb: (tasks: Task[]) => void) {
-    const q = this.fs.query(
-      this.fs.collection(this.db, "tasks"),
-      this.fs.where("member_uids", "array-contains", this.uid)
-    );
-    return this.fs.onSnapshot(
-      q,
-      (snap: any) => {
-        const tasks: Task[] = snap.docs.map((d: any) => {
+    const snapshots = new Map<string, Task[]>();
+    const emit = () => cb([...snapshots.values()].flat());
+    const normalize = (snap: any): Task[] => snap.docs.map((d: any) => {
           const data = d.data() as Record<string, any>;
           return {
             ...data,
+            scope: data.scope === "partner" || data.scope === "pod" ? data.scope : "personal",
             task_id: d.id,
             created_at: toMillis(data.created_at),
             updated_at: toMillis(data.updated_at),
@@ -658,11 +684,21 @@ class FirebaseBackend implements Backend {
             member_uids: Array.isArray(data.member_uids) ? data.member_uids : [],
           } as Task;
         });
-        void cacheTasks(tasks);
-        cb(tasks);
-      },
-      (err: unknown) => console.warn("[vervox] task listener error", err)
-    ) as () => void;
+    const queries = [
+      ["personal", this.fs.where("scope", "==", "personal"), this.fs.where("creator_id", "==", this.uid)],
+      ["partner", this.fs.where("scope", "==", "partner"), this.fs.where("partner_uids", "array-contains", this.uid)],
+      ["pod", this.fs.where("scope", "==", "pod"), this.fs.where("pod_member_uids", "array-contains", this.uid)],
+    ] as const;
+    const unsubs = queries.map(([key, ...constraints]) => {
+      const q = this.fs.query(this.fs.collection(this.db, "tasks"), ...constraints);
+      return this.fs.onSnapshot(q, (snap: any) => {
+        const tasks = normalize(snap);
+        snapshots.set(key, tasks);
+        void cacheTasks([...snapshots.values()].flat());
+        emit();
+      }, (err: unknown) => console.warn(`[vervox] ${key} task listener error`, err));
+    });
+    return () => unsubs.forEach((unsubscribe: () => void) => unsubscribe());
   }
 
   subscribePartners(cb: (partners: string[]) => void) {
@@ -890,9 +926,17 @@ class FirebaseBackend implements Backend {
   }
 
   async setDisplayName(name: string) {
+    await setLockedUsername(name);
+    localStorage.setItem(nameKey(this.deviceId), name);
     await this.fs.setDoc(
       this.fs.doc(this.db, "users", this.uid!),
-      { display_name: name, updated_at: this.fs.Timestamp.fromMillis(Date.now()) },
+      {
+        username: name,
+        display_name: name,
+        vervox_hardware_id: this.deviceId,
+        username_locked: true,
+        updated_at: this.fs.Timestamp.fromMillis(Date.now()),
+      },
       { merge: true }
     );
   }

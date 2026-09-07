@@ -11,6 +11,7 @@ interface Props {
   deviceId: string;
   uid: string | null;
   partners: string[];
+  partnerName?: string | null;
   pairLock: number;
   attempts: number;
   onGenerate: () => Promise<PairCode>;
@@ -31,6 +32,7 @@ export default function PairingModal({
   deviceId,
   uid,
   partners,
+  partnerName,
   pairLock,
   attempts,
   onGenerate,
@@ -124,7 +126,7 @@ export default function PairingModal({
         {paired && (
           <div className="mt-4 rounded-xl bg-emerald-500/10 p-3 ring-1 ring-emerald-500/25">
             <p className="text-[12px] font-semibold text-emerald-300">Linked ✓</p>
-            <p className="mt-0.5 break-all font-mono text-[10px] text-slate-400">{partners[0]}</p>
+            <p className="mt-0.5 text-[12px] font-medium text-emerald-100">Partner: @{partnerName || "Partner"}</p>
             <button
               onClick={() => void onUnpair()}
               className="mt-2 rounded-lg bg-rose-500/15 px-2.5 py-1 text-[11px] font-semibold text-rose-300 hover:bg-rose-500/25"
@@ -135,21 +137,21 @@ export default function PairingModal({
         )}
 
         <div className="mt-4 rounded-xl bg-slate-50 p-3 ring-1 ring-slate-200">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Secure login</p>
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Secure Identity</p>
           <div className="mt-2 grid grid-cols-2 gap-2 text-[11px]">
             <div className="rounded-lg bg-white px-2.5 py-2 ring-1 ring-slate-200">
-              <span className="block text-slate-500">Device</span>
-              <span className="mt-0.5 block truncate font-mono font-semibold text-slate-900">{deviceId.slice(0, 12)}</span>
+              <span className="block text-slate-500">Device Status</span>
+              <span className="mt-0.5 block truncate font-semibold text-emerald-600">Hardware Bound ✓</span>
             </div>
             <div className="rounded-lg bg-white px-2.5 py-2 ring-1 ring-slate-200">
-              <span className="block text-slate-500">{mode === "firebase" ? "Firebase auth" : "Local vault"}</span>
-              <span className="mt-0.5 block truncate font-mono font-semibold text-slate-900">
-                {mode === "firebase" ? uid?.slice(0, 12) || "signing in" : "offline ready"}
+              <span className="block text-slate-500">Engine</span>
+              <span className="mt-0.5 block truncate font-semibold text-slate-900">
+                {mode === "firebase" ? "Cloud Firestore" : "Local Offline"}
               </span>
             </div>
           </div>
           <p className="mt-2 text-[11px] leading-relaxed text-slate-500">
-            Vervox uses a private device identity instead of a public password. Only devices with a valid single-use code can link.
+            Vervox uses a private cryptographic hardware binding instead of a public password. Only devices with a valid single-use code can link.
           </p>
         </div>
 
@@ -244,7 +246,7 @@ export default function PairingModal({
         {error && <p className="mt-3 rounded-lg bg-rose-500/10 px-3 py-2 text-[12px] text-rose-300">{error}</p>}
 
         <p className="mt-4 text-center text-[10px] text-slate-500">
-          Device {deviceId.slice(0, 8)} · engine: {mode === "firebase" ? "Cloud Firestore" : "on-device (offline)"}
+          Silent Hardware Binding Active · Engine: {mode === "firebase" ? "Cloud Firestore" : "On-Device (Offline)"}
         </p>
       </div>
     </div>

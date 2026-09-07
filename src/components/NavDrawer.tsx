@@ -22,6 +22,7 @@ interface Props {
   onDropTask: (view: ViewType) => void;
   mode: BackendMode;
   paired: boolean;
+  partnerName?: string | null;
   onOpenPair: () => void;
   onOpenSettings: () => void;
   onOpenInstall: () => void;
@@ -36,6 +37,7 @@ export default function NavDrawer({
   onDropTask,
   mode,
   paired,
+  partnerName,
   onOpenPair,
   onOpenSettings,
   onOpenInstall,
@@ -144,7 +146,7 @@ export default function NavDrawer({
           }`}
         >
           <IconLink width={15} height={15} />
-          {paired ? "Partner linked" : "Link a partner"}
+          {paired ? (partnerName ? `Partner: @${partnerName}` : "Partner linked") : "Link a partner"}
         </button>
         <button
           onClick={() => {

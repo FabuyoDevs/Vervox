@@ -25,8 +25,11 @@ import { useVervox } from "@/hooks/useVervox";
 import { unlockAudio } from "@/lib/audio";
 import { prettyDate, prettyGroup, sortByDateTime, sortTasks, todayKey } from "@/lib/utils";
 import type { AppView, Task, ViewType } from "@/lib/types";
+import UsernameModal from "@/components/UsernameModal";
+import { setLockedUsername } from "@/lib/vault";
 
-const VALID: AppView[] = ["all", "today", "scheduled"];
+const VALID: AppView[] = ["all", "today", "scheduled", "partner", "pods"];
+const pairId = (left: string, right: string) => [left, right].sort().join(":");
 const readView = (): AppView => {
   const v = new URLSearchParams(location.search).get("view") as AppView | null;
   return v && VALID.includes(v) ? v : "all";
@@ -51,6 +54,18 @@ const META: Record<AppView, { title: string; subtitle: string; emptyTitle: strin
     emptyTitle: "Nothing queued",
     emptyBody: "Schedule a task with a date and time and it lands in this timeline.",
   },
+  partner: {
+    title: "Partner Accountability",
+    subtitle: "1-on-1 split focus with your partner",
+    emptyTitle: "No Partner Tasks",
+    emptyBody: "Link a partner to share tasks and send real-time reminders.",
+  },
+  pods: {
+    title: "Group Pods",
+    subtitle: "Collaborative workspaces for 3–6 teammates",
+    emptyTitle: "No Pod Tasks",
+    emptyBody: "Create or join a Pod to tag teammates and track group commitments.",
+  },
 };
 
 export default function App() {
@@ -63,15 +78,30 @@ export default function App() {
   const [installOpen, setInstallOpen] = useState(false);
   const [mediaTask, setMediaTask] = useState<Task | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(() => localStorage.getItem("vervox:onboarded") !== "1");
+  const [showUsername, setShowUsername] = useState(false);
+
+  /** The first pod (or the one matching the current view) — drives the TaskComposer tag UI. */
+  const activePod = view === "pods" && v.pods.length > 0 ? v.pods[0] : null;
 
   const requestProof = (task: Task) => {
     setMediaTask(task);
   };
 
+  /* Show the one-time username modal when the vault has no locked username. */
+  useEffect(() => {
+    if (v.ready && !v.usernameLocked) setShowUsername(true);
+  }, [v.ready, v.usernameLocked]);
+
+  const handleClaimUsername = async (username: string) => {
+    await setLockedUsername(username);
+    await v.updateName(username);
+    setShowUsername(false);
+  };
+
   useEffect(() => {
     const unlock = () => unlockAudio();
-    window.addEventListener("pointerdown", unlock, { once: true });
-    return () => window.removeEventListener("pointerdown", unlock);
+    window.addEventListener("click", unlock, { once: true });
+    return () => window.removeEventListener("click", unlock);
   }, []);
 
   // Keep the URL in sync so each screen is linkable / restorable.
@@ -94,6 +124,10 @@ export default function App() {
   };
 
   const completedToday = v.todayTasks.filter((t) => t.is_completed);
+  const personalTasks = v.tasks.filter((t) => (t.scope ?? "personal") === "personal" && t.creator_hardware_id === v.deviceId);
+  const activePairId = v.partners[0] ? pairId(v.deviceId, v.partners[0]) : null;
+  const scopedPartnerTasks = v.tasks.filter((t) => t.scope === "partner" && t.partner_pair_id === activePairId);
+  const scopedPodTasks = v.tasks.filter((t) => t.scope === "pod" && t.pod_id === v.pods[0]?.pod_id);
   const meta = META[view];
 
   const views: NavItem[] = [
@@ -102,7 +136,7 @@ export default function App() {
       label: "All Tasks",
       hint: "Today + scheduled",
       icon: <IconInbox width={17} height={17} />,
-      count: v.tasks.filter((t) => !t.is_completed).length,
+      count: personalTasks.filter((t) => !t.is_completed).length,
       dropView: null,
     },
     {
@@ -110,7 +144,7 @@ export default function App() {
       label: "Today's Tasks",
       hint: "Due right now",
       icon: <IconSun width={17} height={17} />,
-      count: v.todayTasks.filter((t) => !t.is_completed).length,
+      count: personalTasks.filter((t) => t.view_type === "today" && !t.is_completed).length,
       dropView: "today",
     },
     {
@@ -118,8 +152,24 @@ export default function App() {
       label: "Scheduled Tasks",
       hint: "Queued for later",
       icon: <IconCalendar width={17} height={17} />,
-      count: v.scheduledTasks.length,
+      count: personalTasks.filter((t) => t.view_type === "scheduled" && !t.is_completed).length,
       dropView: "scheduled",
+    },
+    {
+      key: "partner",
+      label: v.partnerName ? `Partner: @${v.partnerName}` : "Partner Focus",
+      hint: "1-on-1 Dual Focus",
+      icon: <IconLink width={17} height={17} />,
+      count: scopedPartnerTasks.filter((t) => !t.is_completed).length,
+      dropView: null,
+    },
+    {
+      key: "pods",
+      label: "Group Pods",
+      hint: v.pods.length > 0 ? `${v.pods.length} Active` : "3–6 Members",
+      icon: <IconUsers width={17} height={17} />,
+      count: scopedPodTasks.filter((t) => !t.is_completed).length,
+      dropView: null,
     },
   ];
 
@@ -143,6 +193,7 @@ export default function App() {
         onDropTask={moveDropped}
         mode={v.mode}
         paired={v.partners.length > 0}
+        partnerName={v.partnerName}
         onOpenPair={() => setPairOpen(true)}
         onOpenSettings={() => setSettingsOpen(true)}
         onOpenInstall={() => setInstallOpen(true)}
@@ -268,8 +319,8 @@ export default function App() {
 
             {v.ready && view === "all" && (
               <>
-                {v.allTasks.length === 0 && <Empty title={meta.emptyTitle} body={meta.emptyBody} />}
-                {v.allTasks.map((t) => (
+                {personalTasks.filter((t) => t.view_type === "today" || t.view_type === "scheduled").length === 0 && <Empty title={meta.emptyTitle} body={meta.emptyBody} />}
+                {sortByDateTime(personalTasks.filter((t) => t.view_type === "today" || t.view_type === "scheduled")).map((t) => (
                   <TaskRow key={t.task_id} v={v} task={t} view={view} onProof={requestProof} />
                 ))}
               </>
@@ -277,8 +328,8 @@ export default function App() {
 
             {v.ready && view === "today" && (
               <>
-                {v.todayTasks.length === 0 && <Empty title={meta.emptyTitle} body={meta.emptyBody} />}
-                {v.todayTasks.map((t) => (
+                {personalTasks.filter((t) => t.view_type === "today").length === 0 && <Empty title={meta.emptyTitle} body={meta.emptyBody} />}
+                {personalTasks.filter((t) => t.view_type === "today").map((t) => (
                   <TaskRow key={t.task_id} v={v} task={t} view={view} onProof={requestProof} />
                 ))}
               </>
@@ -286,23 +337,148 @@ export default function App() {
 
             {v.ready && view === "scheduled" && (
               <>
-                {v.scheduledGroups.length === 0 && <Empty title={meta.emptyTitle} body={meta.emptyBody} />}
-                {v.scheduledGroups.map(([date, list]) => (
+                {v.scheduledGroups.filter(([, list]) => list.some((t) => personalTasks.some((personal) => personal.task_id === t.task_id))).length === 0 && <Empty title={meta.emptyTitle} body={meta.emptyBody} />}
+                {v.scheduledGroups.map(([date, list]) => {
+                  const personalList = list.filter((t) => personalTasks.some((personal) => personal.task_id === t.task_id));
+                  if (!personalList.length) return null;
+                  return (
                   <section key={date}>
-                    <h3 className="sticky top-[12.5rem] z-10 mb-2 flex items-center gap-2 bg-[#0f172a]/85 py-1 text-[11px] font-bold uppercase tracking-widest text-slate-500 backdrop-blur">
+                    <h3 className="vx-scheduled-heading sticky top-[12.5rem] z-10 mb-2 flex items-center gap-2 py-1 text-[11px] font-bold uppercase tracking-widest text-slate-500 backdrop-blur">
                       {date === "unscheduled" ? "No date" : prettyGroup(date)}
                       <span className="h-px flex-1 bg-slate-200" />
                       <span className="text-slate-600">{list.length}</span>
                     </h3>
                     <div className="space-y-2.5">
-                      {sortTasks(list).map((t) => (
+                      {sortTasks(personalList).map((t) => (
                         <TaskRow key={t.task_id} v={v} task={t} view={view} onProof={requestProof} />
                       ))}
                     </div>
                   </section>
-                ))}
+                  );
+                })}
               </>
             )}
+
+            {/* ── Partner Dual-Focus View ─────────────────────── */}
+            {v.ready && view === "partner" && (() => {
+              const myTasks = sortTasks(scopedPartnerTasks.filter((t) => t.created_by === v.deviceId && !t.is_completed));
+              const partnerTasks = sortTasks(scopedPartnerTasks.filter((t) => t.created_by !== v.deviceId && !t.is_completed));
+              const hasPartner = v.partners.length > 0;
+              if (!hasPartner && myTasks.length === 0 && partnerTasks.length === 0) {
+                return <Empty title={meta.emptyTitle} body={meta.emptyBody} />;
+              }
+              return (
+                <div className="space-y-5">
+                  {/* My Focus */}
+                  <section>
+                    <h3 className="mb-2 flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-slate-500">
+                      <span className="grid h-5 w-5 place-items-center rounded-full bg-indigo-600 text-[9px] font-bold text-white">
+                        {(v.name?.[0] ?? "Y").toUpperCase()}
+                      </span>
+                      My Focus — @{v.name || "You"}
+                      <span className="h-px flex-1 bg-slate-200" />
+                      <span className="text-slate-600">{myTasks.length}</span>
+                    </h3>
+                    {myTasks.length === 0 && (
+                      <p className="rounded-xl border border-dashed border-slate-300 bg-white px-4 py-3 text-center text-[12px] text-slate-500">
+                        You have no active tasks right now.
+                      </p>
+                    )}
+                    <div className="space-y-2.5">
+                      {myTasks.map((t) => (
+                        <TaskRow key={t.task_id} v={v} task={t} view={view} onProof={requestProof} />
+                      ))}
+                    </div>
+                  </section>
+
+                  {/* Partner Focus */}
+                  <section>
+                    <h3 className="mb-2 flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-slate-500">
+                      <span className="grid h-5 w-5 place-items-center rounded-full bg-emerald-600 text-[9px] font-bold text-white">
+                        {(v.partnerName?.[0] ?? "P").toUpperCase()}
+                      </span>
+                      Partner Focus — @{v.partnerName || "Partner"}
+                      <span className="h-px flex-1 bg-slate-200" />
+                      <span className="text-slate-600">{partnerTasks.length}</span>
+                    </h3>
+                    {partnerTasks.length === 0 && (
+                      <p className="rounded-xl border border-dashed border-slate-300 bg-white px-4 py-3 text-center text-[12px] text-slate-500">
+                        {hasPartner ? "Your partner has no active tasks." : "Link a partner to see their tasks here."}
+                      </p>
+                    )}
+                    <div className="space-y-2.5">
+                      {partnerTasks.map((t) => (
+                        <TaskRow key={t.task_id} v={v} task={t} view={view} onProof={requestProof} />
+                      ))}
+                    </div>
+                    {hasPartner && partnerTasks.length > 0 && (
+                      <button
+                        onClick={() => {
+                          for (const t of partnerTasks.slice(0, 1)) void v.sendNudge(t);
+                        }}
+                        className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-amber-50 py-2.5 text-[12px] font-semibold text-amber-700 ring-1 ring-amber-200 transition hover:bg-amber-100"
+                      >
+                        🔔 Nudge Partner
+                      </button>
+                    )}
+                  </section>
+                </div>
+              );
+            })()}
+
+            {/* ── Pods Workspace View ─────────────────────────── */}
+            {v.ready && view === "pods" && (() => {
+              const podTasks = sortTasks(scopedPodTasks.filter((t) => !t.is_completed));
+              if (v.pods.length === 0 && podTasks.length === 0) {
+                return <Empty title={meta.emptyTitle} body={meta.emptyBody} />;
+              }
+              return (
+                <div className="space-y-4">
+                  {/* Pod switcher header */}
+                  {v.pods.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-2">
+                      {v.pods.map((pod) => (
+                        <span
+                          key={pod.pod_id}
+                          className="inline-flex items-center gap-1.5 rounded-xl bg-violet-50 px-3 py-2 text-[12px] font-semibold text-violet-800 ring-1 ring-violet-200"
+                        >
+                          👥 {pod.name}
+                          <span className="rounded-md bg-violet-200/60 px-1.5 py-0.5 text-[10px] font-bold text-violet-700">
+                            {pod.members.length}/{pod.max_members}
+                          </span>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {podTasks.length === 0 && (
+                    <div className="rounded-xl border border-dashed border-slate-300 bg-white px-4 py-5 text-center">
+                      <p className="text-[13px] font-semibold text-slate-700">No pod tasks yet</p>
+                      <p className="mt-1 text-[12px] text-slate-500">
+                        Add a task below — it'll be tagged to your active pod automatically.
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="space-y-2.5">
+                    {podTasks.map((t) => (
+                      <TaskRow key={t.task_id} v={v} task={t} view={view} onProof={requestProof} />
+                    ))}
+                  </div>
+
+                  {podTasks.length > 0 && v.shareTargets.length > 0 && (
+                    <button
+                      onClick={() => {
+                        for (const t of podTasks.slice(0, 1)) void v.sendNudge(t);
+                      }}
+                      className="flex w-full items-center justify-center gap-2 rounded-xl bg-violet-50 py-2.5 text-[12px] font-semibold text-violet-700 ring-1 ring-violet-200 transition hover:bg-violet-100"
+                    >
+                      🔔 Nudge Pod
+                    </button>
+                  )}
+                </div>
+              );
+            })()}
 
             {/* iOS Safari never fires beforeinstallprompt — manual instructions. */}
             <div id="ios-install-banner" className="mb-2.5 rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm">
@@ -332,12 +508,15 @@ export default function App() {
       </div>
 
       {/* Composer */}
-      <div className="fixed inset-x-0 bottom-0 z-40 bg-gradient-to-t from-white via-white/95 to-transparent pt-6">
+      <div className="vx-composer-dock fixed inset-x-0 bottom-0 z-40 pt-4">
         <div className="mx-auto w-full max-w-2xl px-4 pb-[max(1rem,env(safe-area-inset-bottom))] lg:pl-[calc(16rem+1rem)]">
           <TaskComposer
             variant={view}
             onAdd={v.addTask}
             onNotify={(message, tone) => v.pushToast(message, tone ?? "info")}
+            activePod={activePod}
+            pods={v.pods}
+            partnerAvailable={v.partners.length > 0}
           />
           <p className="mt-2 text-center text-[10px] text-slate-400">
             {view === "today"
@@ -387,6 +566,9 @@ export default function App() {
           setShowOnboarding(false);
         }}
       />
+
+      {/* One-time username claim — mandatory on first open */}
+      <UsernameModal open={showUsername} onConfirm={handleClaimUsername} />
 
       <Toasts toasts={v.toasts} onDismiss={v.dismissToast} />
 

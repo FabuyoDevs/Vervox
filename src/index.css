@@ -55,6 +55,22 @@ html {
   }
 }
 
+/* Keep the fixed composer readable without washing out the task list behind it. */
+.vx-composer-dock {
+  pointer-events: none;
+  background: linear-gradient(to top, rgb(248 250 252 / 0.98) 0%, rgb(248 250 252 / 0.82) 42%, transparent 100%);
+}
+
+.vx-composer-dock > div {
+  pointer-events: auto;
+}
+
+/* Scheduled groups use the same light surface as the rest of the timeline. */
+.vx-scheduled-heading {
+  background: rgb(248 250 252 / 0.94);
+  color: #64748b;
+}
+
 /* ── Light-theme compatibility layer ──────────────────────────────────────
    Sheet/dialog components are built from the shared dark-era utility classes.
    Scoping the remap to `.vx-sheet` (panels) and `.vx-overlay` (backdrops)

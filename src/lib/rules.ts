@@ -53,24 +53,33 @@ service cloud.firestore {
     }
 
     // ── Tasks ───────────────────────────────────────────────────
-    // Strict row-level security. A task is visible only to the device UUIDs /
-    // auth UIDs listed on the document — 2 for a pair, up to 6 for a pod.
+    // Strict row-level security with workspace-scoped task mutations.
     match /tasks/{taskId} {
-      allow create: if signedIn()
-                    && request.resource.data.created_by is string
-                    && request.auth.uid in request.resource.data.member_uids
-                    && request.resource.data.assigned_to.size() >= 1
-                    && request.resource.data.assigned_to.size() <= 6;
+      function personal(data) {
+        return data.scope == 'personal' && data.creator_id == request.auth.uid;
+      }
+      function partner(data) {
+        return data.scope == 'partner' && request.auth.uid in data.partner_uids;
+      }
+      function pod(data) {
+        return data.scope == 'pod' && request.auth.uid in data.pod_member_uids;
+      }
+      function inWorkspace(data) {
+        return personal(data) || partner(data) || pod(data);
+      }
 
-      allow read, update, delete: if signedIn()
-                    && (request.auth.uid in resource.data.assigned_to
-                        || request.auth.uid in resource.data.member_uids);
-
-      // Media lives on the task, so it inherits the same row-level lock.
-      // Nobody may widen the audience after creation.
+      allow read: if signedIn() && inWorkspace(resource.data);
+      allow create: if signedIn() && inWorkspace(request.resource.data);
       allow update: if signedIn()
-                    && request.resource.data.member_uids.toSet()
-                         .difference(resource.data.member_uids.toSet()).size() == 0;
+                    && inWorkspace(resource.data)
+                    && inWorkspace(request.resource.data)
+                    && (
+                      resource.data.scope == 'personal'
+                      || request.resource.data.scope == resource.data.scope
+                      && request.resource.data.diff(resource.data).affectedKeys()
+                           .hasOnly(['is_completed', 'completed_by', 'completed_by_name', 'completed_at', 'updated_at'])
+                    );
+      allow delete: if signedIn() && personal(resource.data);
     }
 
     // ── Entitlements / tier ─────────────────────────────────────

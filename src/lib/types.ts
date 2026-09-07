@@ -1,9 +1,10 @@
 export type ViewType = "today" | "scheduled";
 
-/** The three routed screens reachable from the navigation menu. */
-export type AppView = "all" | "today" | "scheduled";
+/** Routed screens reachable from navigation menu. */
+export type AppView = "all" | "today" | "scheduled" | "partner" | "pods";
 
 export type Priority = "low" | "normal" | "high";
+export type TaskScope = "personal" | "partner" | "pod";
 
 export interface Subtask {
   id: string;
@@ -36,13 +37,22 @@ export interface TaskMedia {
 export interface Task {
   task_id: string;
   title: string;
-  created_by: string; // device uuid
+  scope: TaskScope;
+  creator_id: string; // auth uid or hardware id
+  creator_username: string; // one-time locked username
+  creator_hardware_id?: string; // permanent vervox_hardware_id
+  created_by: string; // device uuid / hardware id
   created_by_name: string | null;
   assigned_to: string[]; // device uuids — 2 for a pair, up to 6 for a pod
+  tagged_members?: string[]; // pod member names or '@All'
   member_uids: string[]; // firebase auth uids (used by security rules)
+  partner_pair_id?: string | null;
+  partner_uids?: string[];
   pod_id: string | null; // set when the task belongs to a group pod
+  pod_member_uids?: string[];
   is_completed: boolean;
   completed_by: string | null;
+  completed_by_name?: string | null;
   completed_at: number | null;
   view_type: ViewType;
   schedule: Schedule | null;

@@ -20,6 +20,8 @@ interface Props {
   themeId: string;
   chimeId: string;
   name: string;
+  partnerName?: string | null;
+  podNames?: string[];
   onTheme: (id: string) => void;
   onChime: (id: string) => void;
   onName: (value: string) => void;
@@ -40,6 +42,8 @@ export default function SettingsSheet({
   themeId,
   chimeId,
   name,
+  partnerName,
+  podNames,
   onTheme,
   onChime,
   onName,
@@ -115,13 +119,15 @@ export default function SettingsSheet({
                 {(displayName.trim()[0] ?? "V").toUpperCase()}
               </span>
               <div className="min-w-0 flex-1">
-                <input
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  onBlur={() => onName(displayName)}
-                  placeholder="Your name"
-                  className="w-full bg-transparent text-[15px] font-semibold text-slate-900 outline-none placeholder:text-slate-400"
-                />
+                <div className="flex items-center gap-2">
+                  <span className="text-[15px] font-bold text-slate-900">
+                    @{displayName || "user"}
+                  </span>
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 ring-1 ring-emerald-200">
+                    <IconCheck width={9} height={9} strokeWidth={3} />
+                    Username Locked
+                  </span>
+                </div>
                 <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                   <span className="rounded-md bg-indigo-50 px-2 py-0.5 text-[10px] font-bold tracking-wide text-indigo-700">
                     Vervox Free — All Features Unlocked
@@ -143,12 +149,18 @@ export default function SettingsSheet({
               </div>
             </div>
 
-            <p className="mt-3 border-t border-slate-100 pt-3 text-[12px]">
-              {partners.length > 0
-                ? `Connected with ${partners.length} partner${partners.length === 1 ? "" : "s"}`
-                : "No partner linked"}
-              {pods > 0 && ` · ${pods} group pod${pods === 1 ? "" : "s"}`}
-            </p>
+            <div className="mt-3 space-y-1 border-t border-slate-100 pt-3 text-[12px]">
+              <p className="font-semibold text-slate-700">
+                {partnerName ? `Partner: @${partnerName}` : partners.length > 0 ? "Partner: Linked" : "Partner: None linked"}
+              </p>
+              {podNames && podNames.length > 0 ? (
+                <p className="font-semibold text-slate-700">
+                  {podNames.map((p) => `Pod: ${p}`).join(" · ")}
+                </p>
+              ) : pods > 0 ? (
+                <p className="font-semibold text-slate-700">Pods: {pods} active</p>
+              ) : null}
+            </div>
           </section>
 
           {/* ── Preferences ─────────────────────────────────────── */}

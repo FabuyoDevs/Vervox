@@ -88,16 +88,17 @@ export default function TaskItem({
   };
 
   const doubleTap = () => {
+    if (!mine) return;
     lastDouble.current = Date.now();
     if (clickTimer.current) {
       window.clearTimeout(clickTimer.current);
       clickTimer.current = null;
     }
+    setExpanded(false);
     setDraft(task.title);
     setDraftTime(task.schedule?.time ?? "");
     setDraftDate(task.schedule?.date ?? "");
     setEditing(true);
-    setExpanded(false);
   };
 
   const handleTouchEnd = () => {
@@ -341,14 +342,28 @@ export default function TaskItem({
                 {done}/{task.subtasks.length} subtasks
               </button>
             )}
-            {(authorName || task.created_by_name) && (
-              <span className="rounded-md bg-slate-100 px-1.5 py-0.5 font-semibold text-slate-500">
-                @{authorName || task.created_by_name}
+            {/* Member avatar badge: Creator */}
+            <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 pl-1 pr-2 py-0.5 text-[11px] font-semibold text-slate-700">
+              <span className="grid h-4 w-4 place-items-center rounded-full bg-indigo-600 text-[9px] font-bold text-white">
+                {((task.creator_username || authorName || task.created_by_name || "U")[0] || "U").toUpperCase()}
+              </span>
+              <span>@{task.creator_username || authorName || task.created_by_name || "Creator"}{mine ? " (You)" : ""}</span>
+            </span>
+
+            {/* Pod Tagged Members */}
+            {task.tagged_members && task.tagged_members.length > 0 && (
+              <span className="rounded-md bg-violet-50 px-1.5 py-0.5 font-semibold text-violet-700 ring-1 ring-violet-200/60">
+                🏷️ {task.tagged_members.join(", ")}
               </span>
             )}
-            {task.completed_by && task.is_completed && (
-              <span className="rounded-md bg-emerald-50 px-1.5 py-0.5 font-semibold text-emerald-700">
-                {task.completed_by === task.created_by ? (mine ? "you" : "partner") : mine ? "partner" : "you"}
+
+            {/* Member avatar badge: Completer */}
+            {task.is_completed && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 pl-1 pr-2 py-0.5 text-[11px] font-semibold text-emerald-700 ring-1 ring-emerald-200">
+                <span className="grid h-4 w-4 place-items-center rounded-full bg-emerald-600 text-[9px] font-bold text-white">
+                  ✓
+                </span>
+                <span>Done by @{task.completed_by_name || (task.completed_by === task.created_by ? (mine ? "You" : (task.creator_username || "Creator")) : (mine ? (authorName || "Partner") : "You"))}</span>
               </span>
             )}
           </div>
@@ -386,16 +401,18 @@ export default function TaskItem({
               <span className={`flex-1 text-[13px] ${s.done ? "text-slate-400 line-through" : "text-slate-700"}`}>
                 {s.title}
               </span>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onRemoveSubtask(task, s.id);
-                }}
-                className="text-slate-400 hover:text-rose-500"
-                aria-label="Remove subtask"
-              >
-                <IconX width={14} height={14} />
-              </button>
+              {mine && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRemoveSubtask(task, s.id);
+                  }}
+                  className="text-slate-400 hover:text-rose-500"
+                  aria-label="Remove subtask"
+                >
+                  <IconX width={14} height={14} />
+                </button>
+              )}
             </div>
           ))}
         </div>
@@ -419,27 +436,43 @@ export default function TaskItem({
               <IconCheck width={16} height={16} />
               {task.is_completed ? "Reopen" : "Complete"}
             </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete(task);
-              }}
-              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-rose-50 py-2.5 text-sm font-semibold text-rose-600 ring-1 ring-rose-200 transition hover:bg-rose-100"
-            >
-              <IconX width={16} height={16} />
-              Delete
-            </button>
+            {mine && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(task);
+                }}
+                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-rose-50 py-2.5 text-sm font-semibold text-rose-600 ring-1 ring-rose-200 transition hover:bg-rose-100"
+              >
+                <IconX width={16} height={16} />
+                Delete
+              </button>
+            )}
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onMove(task, task.view_type === "today" ? "scheduled" : "today");
-              }}
-              className="rounded-lg bg-white px-2.5 py-1.5 text-[11px] font-semibold text-slate-600 ring-1 ring-slate-200 transition hover:bg-slate-50"
-            >
-              Move to {task.view_type === "today" ? "Scheduled" : "Today"}
-            </button>
+            {mine && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setEditing(true);
+                  setExpanded(false);
+                }}
+                className="rounded-lg bg-white px-2.5 py-1.5 text-[11px] font-semibold text-slate-600 ring-1 ring-slate-200 transition hover:bg-slate-50"
+              >
+                Edit
+              </button>
+            )}
+            {mine && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onMove(task, task.view_type === "today" ? "scheduled" : "today");
+                }}
+                className="rounded-lg bg-white px-2.5 py-1.5 text-[11px] font-semibold text-slate-600 ring-1 ring-slate-200 transition hover:bg-slate-50"
+              >
+                Move to {task.view_type === "today" ? "Scheduled" : "Today"}
+              </button>
+            )}
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -475,38 +508,42 @@ export default function TaskItem({
             >
               {showSubs ? "Hide subtasks" : "Subtasks"}
             </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                const next: Priority = task.priority === "high" ? "low" : task.priority === "low" ? "normal" : "high";
-                onPatch(task.task_id, { priority: next });
-              }}
-              className="rounded-lg bg-white px-2.5 py-1.5 text-[11px] font-semibold text-slate-600 ring-1 ring-slate-200 transition hover:bg-slate-50"
-            >
-              <IconFlag width={12} height={12} className="mr-1 inline" />
-              {task.priority}
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onPatch(task.task_id, {
-                  schedule: task.schedule
-                    ? { ...task.schedule, has_alarm: !task.schedule.has_alarm }
-                    : { has_alarm: true, date: "", time: "" },
-                });
-              }}
-              className={`rounded-lg px-2.5 py-1.5 text-[11px] font-semibold transition ${
-                task.schedule?.has_alarm
-                  ? "bg-amber-50 text-amber-700 ring-1 ring-amber-200"
-                  : "bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50"
-              }`}
-            >
-              <IconBell width={12} height={12} className="mr-1 inline" />
-              Alarm
-            </button>
+            {mine && (
+              <>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const next: Priority = task.priority === "high" ? "low" : task.priority === "low" ? "normal" : "high";
+                    onPatch(task.task_id, { priority: next });
+                  }}
+                  className="rounded-lg bg-white px-2.5 py-1.5 text-[11px] font-semibold text-slate-600 ring-1 ring-slate-200 transition hover:bg-slate-50"
+                >
+                  <IconFlag width={12} height={12} className="mr-1 inline" />
+                  {task.priority}
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onPatch(task.task_id, {
+                      schedule: task.schedule
+                        ? { ...task.schedule, has_alarm: !task.schedule.has_alarm }
+                        : { has_alarm: true, date: "", time: "" },
+                    });
+                  }}
+                  className={`rounded-lg px-2.5 py-1.5 text-[11px] font-semibold transition ${
+                    task.schedule?.has_alarm
+                      ? "bg-amber-50 text-amber-700 ring-1 ring-amber-200"
+                      : "bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50"
+                  }`}
+                >
+                  <IconBell width={12} height={12} className="mr-1 inline" />
+                  Alarm
+                </button>
+              </>
+            )}
           </div>
 
-          {showSubs && (
+          {showSubs && mine && (
             <div className="flex items-center gap-2">
               <input
                 value={subDraft}
