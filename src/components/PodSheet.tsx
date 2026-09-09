@@ -86,7 +86,7 @@ export default function PodSheet({
     setBusy(true);
     setError(null);
     try {
-      const result = await onCreate(podName, memberName || "You");
+      const result = await onCreate(podName, memberName);
       setInvite(result.code);
       setRemaining(result.code.expires_at - Date.now());
       setPodName("");
@@ -103,7 +103,7 @@ export default function PodSheet({
     setBusy(true);
     setError(null);
     try {
-      await onJoin(code, memberName || "You");
+      await onJoin(code, memberName);
       setCode("");
       onClose();
     } catch (err) {

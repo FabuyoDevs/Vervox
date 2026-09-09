@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
-import { IconCheck, IconCloud, IconDownload, IconLink, IconSettings, IconSmartphone, IconX } from "@/components/Icons";
-import { usePwaInstall } from "@/lib/pwa";
+import { IconCloud, IconLink, IconSettings, IconX } from "@/components/Icons";
 import type { AppView, BackendMode, ViewType } from "@/lib/types";
 
 export interface NavItem {
@@ -25,7 +24,6 @@ interface Props {
   partnerName?: string | null;
   onOpenPair: () => void;
   onOpenSettings: () => void;
-  onOpenInstall: () => void;
 }
 
 export default function NavDrawer({
@@ -40,24 +38,10 @@ export default function NavDrawer({
   partnerName,
   onOpenPair,
   onOpenSettings,
-  onOpenInstall,
 }: Props) {
-  const { canPrompt, installed, promptInstall } = usePwaInstall();
 
   const select = (view: AppView) => {
     onChange(view);
-    onClose();
-  };
-
-  const handleInstallClick = async () => {
-    if (canPrompt) {
-      const outcome = await promptInstall();
-      if (outcome === "accepted") {
-        onClose();
-        return;
-      }
-    }
-    onOpenInstall();
     onClose();
   };
 
@@ -111,29 +95,6 @@ export default function NavDrawer({
       })}
 
       <div className="mt-auto space-y-2 pt-4">
-        {/* PWA Install Button */}
-        {!installed ? (
-          <button
-            type="button"
-            onClick={handleInstallClick}
-            className="flex w-full items-center justify-between rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-3 py-2.5 text-[12px] font-semibold text-white shadow-sm transition hover:from-indigo-700 hover:to-violet-700 active:scale-[0.98]"
-          >
-            <span className="flex items-center gap-2">
-              <IconSmartphone width={15} height={15} />
-              Install Vervox App
-            </span>
-            <span className="flex items-center gap-1 rounded-md bg-white/20 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
-              <IconDownload width={10} height={10} />
-              Get
-            </span>
-          </button>
-        ) : (
-          <div className="flex w-full items-center gap-2 rounded-xl bg-emerald-50 px-3 py-2 text-[11px] font-semibold text-emerald-700 ring-1 ring-emerald-200">
-            <IconCheck width={14} height={14} className="text-emerald-600" />
-            <span>App Installed on Device</span>
-          </div>
-        )}
-
         <button
           onClick={() => {
             onOpenPair();

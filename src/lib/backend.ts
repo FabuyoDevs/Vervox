@@ -468,10 +468,11 @@ class LocalBackend implements Backend {
   }
 
   async createPod(name: string, memberName: string): Promise<{ pod: Pod; code: PairCode }> {
+    const memberNameOrDisplay = memberName || displayName(this.deviceId) || `Member 1`;
     const me: PodMember = {
       device_id: this.deviceId,
       uid: null,
-      name: memberName || "You",
+      name: memberNameOrDisplay,
       joined_at: Date.now(),
     };
     const pod: Pod = {
@@ -507,9 +508,10 @@ class LocalBackend implements Backend {
     writeCodes(map);
     resetRateLimit();
     if (memberName) localStorage.setItem(nameKey(this.deviceId), memberName);
+    const memberNameOrDisplay = memberName || displayName(this.deviceId) || `Member ${pod.members.length + 1}`;
     pod.members = [
       ...pod.members,
-      { device_id: this.deviceId, uid: null, name: memberName || `Member ${pod.members.length + 1}`, joined_at: Date.now() },
+      { device_id: this.deviceId, uid: null, name: memberNameOrDisplay, joined_at: Date.now() },
     ];
     pods[pod.pod_id] = pod;
     writePods(pods);
@@ -855,10 +857,11 @@ class FirebaseBackend implements Backend {
 
   async createPod(name: string, memberName: string): Promise<{ pod: Pod; code: PairCode }> {
     const pod_id = makeId("pod");
+    const memberNameOrDisplay = memberName || displayName(this.deviceId) || `Member 1`;
     const member: PodMember = {
       device_id: this.deviceId,
       uid: this.uid,
-      name: memberName || "You",
+      name: memberNameOrDisplay,
       joined_at: Date.now(),
     };
     const pod: Pod = {
@@ -893,10 +896,11 @@ class FirebaseBackend implements Backend {
     if ((pod.member_ids ?? []).includes(this.deviceId)) throw new PairError("You're already in this pod.", "self");
     await this.fs.deleteDoc(ref);
     resetRateLimit();
+    const memberNameOrDisplay = memberName || displayName(this.deviceId) || `Member ${(pod.members?.length ?? 0) + 1}`;
     const member: PodMember = {
       device_id: this.deviceId,
       uid: this.uid,
-      name: memberName || `Member ${(pod.members?.length ?? 0) + 1}`,
+      name: memberNameOrDisplay,
       joined_at: Date.now(),
     };
     await this.fs.updateDoc(podRef, {

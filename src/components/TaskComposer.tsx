@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import { IconBell, IconCalendar, IconMapPin, IconMic, IconPlus, IconSun } from "@/components/Icons";
 import { speechSupported, startDictation } from "@/lib/speech";
 import { describeParsed, parseTaskInput, type ParsedTask } from "@/lib/nlp";
-import { requestNotificationPermission } from "@/lib/pwa";
 import { addDays, nowTime, todayKey } from "@/lib/utils";
 import { playUndoChime } from "@/lib/audio";
 import type { AppView, Pod, Priority, TaskScope } from "@/lib/types";
@@ -16,11 +15,12 @@ interface Props {
   activePod?: Pod | null;
   pods?: Pod[];
   partnerAvailable?: boolean;
+  onRequestPermission?: (kind: "notifications" | "media") => void;
 }
 
 const PRIORITIES: Priority[] = ["low", "normal", "high"];
 
-export default function TaskComposer({ variant, onAdd, onNotify, activePod, pods = [], partnerAvailable = false }: Props) {
+export default function TaskComposer({ variant, onAdd, onNotify, activePod, pods = [], partnerAvailable = false, onRequestPermission }: Props) {
   const [title, setTitle] = useState("");
   const [podTag, setPodTag] = useState<string>("@All");
   const [scope, setScope] = useState<TaskScope>("personal");
@@ -286,10 +286,11 @@ export default function TaskComposer({ variant, onAdd, onNotify, activePod, pods
           <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={() => {
-                setAlarm((v) => !v);
                 if (!alarm && typeof Notification !== "undefined" && Notification.permission === "default") {
-                  void requestNotificationPermission();
+                  onRequestPermission?.("notifications");
+                  return;
                 }
+                setAlarm((v) => !v);
               }}
               className={`rounded-lg px-2.5 py-1.5 text-[11px] font-semibold transition ${
                 alarm

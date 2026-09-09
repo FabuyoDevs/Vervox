@@ -32,3 +32,14 @@ yarn-error.log*
 .cache/
 .turbo/
 .vercel
+
+# Native wrapper and mobile-only artifacts should stay outside the public web repo
+android/
+ios/
+capacitor.config.ts
+*.apk
+*.aab
+*.ipa
+
+# Keep generated web bundle in dist only when deployed; do not track native sync files
+

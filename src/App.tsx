@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import InstallModal from "@/components/InstallModal";
 import NavDrawer, { type NavItem } from "@/components/NavDrawer";
 import Onboarding from "@/components/Onboarding";
 import PairingModal from "@/components/PairingModal";
@@ -10,6 +9,7 @@ import Toasts from "@/components/Toasts";
 import MediaCapture from "@/components/MediaCapture";
 import PodSheet from "@/components/PodSheet";
 import Prompts from "@/components/Prompts";
+import NativePermissionPrompt from "@/components/NativePermissionPrompt";
 import {
   IconArchive,
   IconCalendar,
@@ -27,6 +27,7 @@ import { prettyDate, prettyGroup, sortByDateTime, sortTasks, todayKey } from "@/
 import type { AppView, Task, ViewType } from "@/lib/types";
 import UsernameModal from "@/components/UsernameModal";
 import { setLockedUsername } from "@/lib/vault";
+import { requestNotificationPermission } from "@/lib/pwa";
 
 const VALID: AppView[] = ["all", "today", "scheduled", "partner", "pods"];
 const pairId = (left: string, right: string) => [left, right].sort().join(":");
@@ -75,10 +76,11 @@ export default function App() {
   const [pairOpen, setPairOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [podOpen, setPodOpen] = useState(false);
-  const [installOpen, setInstallOpen] = useState(false);
   const [mediaTask, setMediaTask] = useState<Task | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(() => localStorage.getItem("vervox:onboarded") !== "1");
   const [showUsername, setShowUsername] = useState(false);
+  const [iosInstallDismissed, setIosInstallDismissed] = useState(() => localStorage.getItem("vervox:ios-install-dismissed") === "1");
+  const [permissionKind, setPermissionKind] = useState<"notifications" | "media" | null>(null);
 
   /** The first pod (or the one matching the current view) — drives the TaskComposer tag UI. */
   const activePod = view === "pods" && v.pods.length > 0 ? v.pods[0] : null;
@@ -121,6 +123,17 @@ export default function App() {
   const wipe = () => {
     if (!window.confirm("Delete every task on this device? This cannot be undone.")) return;
     for (const t of v.tasks) void v.removeTask(t);
+  };
+
+  const requestPermission = (kind: "notifications" | "media") => {
+    setPermissionKind(kind);
+  };
+
+  const allowPermission = async () => {
+    if (permissionKind === "notifications") {
+      await requestNotificationPermission();
+    }
+    setPermissionKind(null);
   };
 
   const completedToday = v.todayTasks.filter((t) => t.is_completed);
@@ -196,7 +209,6 @@ export default function App() {
         partnerName={v.partnerName}
         onOpenPair={() => setPairOpen(true)}
         onOpenSettings={() => setSettingsOpen(true)}
-        onOpenInstall={() => setInstallOpen(true)}
       />
 
       <div className="relative lg:pl-64">
@@ -480,27 +492,32 @@ export default function App() {
               );
             })()}
 
-            {/* iOS Safari never fires beforeinstallprompt — manual instructions. */}
-            <div id="ios-install-banner" className="mb-2.5 rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm">
-              <div className="flex items-start gap-3">
-                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-slate-100 text-lg">📱</span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-[13px] font-semibold text-slate-900">Install Vervox on iOS</p>
-                  <p className="mt-0.5 text-[11.5px] leading-relaxed text-slate-600">
-                    To install Vervox on iOS, tap the Share icon{" "}
-                    <span className="font-semibold text-slate-900">⎋</span> and select “Add to Home Screen”{" "}
-                    <span className="font-semibold text-slate-900">➕</span>
-                  </p>
+            {!iosInstallDismissed && (
+              <div id="ios-install-banner" className="mb-2.5 rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm">
+                <div className="flex items-start gap-3">
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-slate-100 text-lg">📱</span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[13px] font-semibold text-slate-900">Install Vervox on iOS</p>
+                    <p className="mt-0.5 text-[11.5px] leading-relaxed text-slate-600">
+                      To install Vervox on iOS, tap the Share icon{" "}
+                      <span className="font-semibold text-slate-900">⎋</span> and select “Add to Home Screen”{" "}
+                      <span className="font-semibold text-slate-900">➕</span>
+                    </p>
+                  </div>
+                  <button
+                    id="ios-install-dismiss"
+                    className="rounded-lg p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                    aria-label="Dismiss install instructions"
+                    onClick={() => {
+                      localStorage.setItem("vervox:ios-install-dismissed", "1");
+                      setIosInstallDismissed(true);
+                    }}
+                  >
+                    ✕
+                  </button>
                 </div>
-                <button
-                  id="ios-install-dismiss"
-                  className="rounded-lg p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
-                  aria-label="Dismiss install instructions"
-                >
-                  ✕
-                </button>
               </div>
-            </div>
+            )}
 
             <Prompts onNotify={(message, tone) => v.pushToast(message, tone ?? "info")} />
           </main>
@@ -517,6 +534,7 @@ export default function App() {
             activePod={activePod}
             pods={v.pods}
             partnerAvailable={v.partners.length > 0}
+            onRequestPermission={requestPermission}
           />
           <p className="mt-2 text-center text-[10px] text-slate-400">
             {view === "today"
@@ -550,13 +568,6 @@ export default function App() {
         onClose={() => setMediaTask(null)}
         onAttach={(patch) => (mediaTask ? v.attachMedia(mediaTask, patch) : Promise.resolve())}
         onClear={(kind) => (mediaTask ? v.clearMedia(mediaTask, kind) : Promise.resolve())}
-      />
-
-      {/* PWA Install modal — auto prompt + on-demand from hamburger menu */}
-      <InstallModal
-        open={installOpen}
-        onClose={() => setInstallOpen(false)}
-        onSuccess={() => v.pushToast("Vervox installed to your device!", "success")}
       />
 
       <Onboarding
@@ -612,6 +623,13 @@ export default function App() {
           v.pushToast(`Archived ${completedToday.length} completed task${completedToday.length === 1 ? "" : "s"}.`, "success");
         }}
         onWipe={wipe}
+      />
+
+      <NativePermissionPrompt
+        open={permissionKind !== null}
+        kind={permissionKind ?? "notifications"}
+        onAllow={() => void allowPermission()}
+        onCancel={() => setPermissionKind(null)}
       />
     </div>
   );
