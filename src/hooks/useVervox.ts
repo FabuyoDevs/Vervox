@@ -103,13 +103,23 @@ export function useVervox(initialView: AppView = "all") {
   /* ---------------- toasts ---------------- */
   const dismissToast = useCallback((id: string) => setToasts((t) => t.filter((x) => x.id !== id)), []);
 
+  const shouldShowToast = useCallback((message: string) => {
+    return /^(Created|Deleted)\s—\s/.test(message)
+      || /^Partner linked\b/.test(message)
+      || /^Partner unlinked\b/.test(message)
+      || /^Pod\s/.test(message)
+      || /^Joined\s/.test(message)
+      || /^Left\s/.test(message);
+  }, []);
+
   const pushToast = useCallback(
     (message: string, tone: Toast["tone"] = "info", action?: Toast["action"], ttl = 8000) => {
+      if (!shouldShowToast(message)) return;
       const id = makeId("toast");
       setToasts((t) => [...t.slice(-2), { id, message, tone, action }]);
       window.setTimeout(() => dismissToast(id), action ? 12000 : ttl);
     },
-    [dismissToast]
+    [dismissToast, shouldShowToast]
   );
 
   /* ---------------- boot ---------------- */
@@ -344,9 +354,10 @@ export function useVervox(initialView: AppView = "all") {
         },
         () => setTasks((prev) => sortTasks([...prev.filter((t) => t.task_id !== task.task_id), task]))
       );
+      pushToast(`Created — ${task.title}`, "success");
       return task;
     },
-    [name, partners, pods, runOrQueue]
+    [name, partners, pods, pushToast, runOrQueue]
   );
 
   const patchTask = useCallback(
