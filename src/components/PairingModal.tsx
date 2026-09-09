@@ -115,7 +115,7 @@ export default function PairingModal({
               Link a partner
             </h2>
             <p className="mt-1 text-[12px] text-slate-400">
-              Secure device sign-in, one-time code, 5-minute expiry.
+              Secure device sign-in, one-time code.
             </p>
           </div>
           <button onClick={onClose} className="rounded-lg p-1 text-slate-400 hover:bg-slate-800 hover:text-slate-200">
