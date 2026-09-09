@@ -1,4 +1,6 @@
 /* PWA helpers: service-worker registration, install prompt, local notifications. */
+import { Capacitor } from "@capacitor/core";
+import { LocalNotifications } from "@capacitor/local-notifications";
 import { useEffect, useState } from "react";
 
 export async function registerServiceWorker() {
@@ -118,18 +120,59 @@ export function usePwaInstall() {
   return { canPrompt, installed, isIOS: ios, promptInstall };
 }
 
+export function currentNotificationPermission(): NotificationPermission {
+  if (Capacitor.isNativePlatform()) {
+    const state = localStorage.getItem("vervox:native-notif-perm");
+    if (state === "granted") return "granted";
+    if (state === "denied") return "denied";
+    return "default";
+  }
+
+  if (typeof Notification === "undefined") return "denied";
+  return Notification.permission;
+}
+
 /** App-level notification switch (independent of the OS permission). */
-export const notificationsEnabled = (): boolean =>
-  localStorage.getItem("vervox:notif-enabled") !== "0" &&
-  typeof Notification !== "undefined" &&
-  Notification.permission === "granted";
+export const notificationsEnabled = (): boolean => {
+  if (Capacitor.isNativePlatform()) {
+    return localStorage.getItem("vervox:notif-enabled") !== "0" && localStorage.getItem("vervox:native-notif-perm") === "granted";
+  }
+
+  return localStorage.getItem("vervox:notif-enabled") !== "0" && typeof Notification !== "undefined" && Notification.permission === "granted";
+};
 
 export const setNotificationsEnabled = (value: boolean) =>
   localStorage.setItem("vervox:notif-enabled", value ? "1" : "0");
 
+function nativePermissionStateToBrowser(state: string | undefined): NotificationPermission {
+  if (state === "granted") return "granted";
+  if (state === "denied") return "denied";
+  return "default";
+}
+
 /* Local alarms: prefer the service worker (works while backgrounded), fall back
    to a page-level Notification, then to audio only. */
 export async function fireLocalNotification(title: string, body: string, tag: string) {
+  if (Capacitor.isNativePlatform()) {
+    if (localStorage.getItem("vervox:native-notif-perm") !== "granted") return;
+    try {
+      await LocalNotifications.schedule({
+        notifications: [
+          {
+            id: Date.now() + Math.round(Math.random() * 1000),
+            title,
+            body,
+            extra: { tag },
+            schedule: { at: new Date(Date.now() + 500) },
+          },
+        ],
+      });
+    } catch {
+      /* native notification scheduling is optional */
+    }
+    return;
+  }
+
   if (!("Notification" in window)) return;
   if (Notification.permission !== "granted") return;
   if ("serviceWorker" in navigator) {
@@ -147,6 +190,18 @@ export async function fireLocalNotification(title: string, body: string, tag: st
 }
 
 export async function requestNotificationPermission(): Promise<NotificationPermission> {
+  if (Capacitor.isNativePlatform()) {
+    try {
+      const result = await LocalNotifications.requestPermissions();
+      const per = nativePermissionStateToBrowser(result?.notifications ?? undefined);
+      localStorage.setItem("vervox:native-notif-perm", per === "granted" ? "granted" : per === "denied" ? "denied" : "prompt");
+      return per;
+    } catch {
+      localStorage.setItem("vervox:native-notif-perm", "denied");
+      return "denied";
+    }
+  }
+
   if (!("Notification" in window)) return "denied";
   if (Notification.permission === "granted") return "granted";
   try {
@@ -158,6 +213,7 @@ export async function requestNotificationPermission(): Promise<NotificationPermi
 
 /** Web Push subscription (needs VITE_VAPID_PUBLIC_KEY). */
 export async function subscribeToPush(): Promise<PushSubscription | null> {
+  if (Capacitor.isNativePlatform()) return null;
   const vapid = ((import.meta as unknown as { env?: Record<string, string | undefined> }).env ?? {})
     .VITE_VAPID_PUBLIC_KEY;
   if (!vapid || !("serviceWorker" in navigator)) return null;

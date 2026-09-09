@@ -3,7 +3,7 @@ import { IconArchive, IconCheck, IconCloud, IconSettings, IconX } from "@/compon
 import { isMuted, playCompleteChime, setMuted } from "@/lib/audio";
 import type { Currency } from "@/lib/billing";
 import { CHIME_PACKS, THEMES } from "@/lib/themes";
-import { notificationsEnabled, requestNotificationPermission, setNotificationsEnabled, subscribeToPush } from "@/lib/pwa";
+import { currentNotificationPermission, notificationsEnabled, requestNotificationPermission, setNotificationsEnabled, subscribeToPush } from "@/lib/pwa";
 import { DEFAULT_QUIET, loadQuietHours, saveQuietHours, type QuietHours } from "@/lib/utils";
 import type { Entitlements } from "@/lib/types";
 
@@ -59,7 +59,7 @@ export default function SettingsSheet({
   useEffect(() => {
     if (!open) return;
     setDisplayName(name);
-    setPermission(typeof Notification !== "undefined" ? Notification.permission : "denied");
+    setPermission(currentNotificationPermission());
     setNotifOn(notificationsEnabled());
     setChimesOn(!isMuted());
     setQuiet(loadQuietHours());
@@ -170,7 +170,7 @@ export default function SettingsSheet({
               label="Notifications & alarms"
               hint={
                 permission === "denied"
-                  ? "Blocked in browser settings"
+                  ? "Blocked by device permission"
                   : permission === "granted"
                     ? "Lock-screen alarms & partner updates"
                     : "Tap to allow notifications"

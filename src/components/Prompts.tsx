@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { IconBell, IconCheck, IconX } from "@/components/Icons";
-import { fireLocalNotification, notificationsEnabled, requestNotificationPermission, subscribeToPush } from "@/lib/pwa";
+import { currentNotificationPermission, fireLocalNotification, notificationsEnabled, requestNotificationPermission, subscribeToPush } from "@/lib/pwa";
 
 interface Props {
   onNotify: (message: string, tone?: "info" | "success" | "danger") => void;
@@ -18,7 +18,7 @@ export default function Prompts({ onNotify }: Props) {
   const [hideNotif, setHideNotif] = useState(() => localStorage.getItem(KEY_NOTIF) === "1");
 
   useEffect(() => {
-    setPerm(typeof Notification !== "undefined" ? Notification.permission : "denied");
+    setPerm(currentNotificationPermission());
   }, []);
 
   const visible = perm !== "granted" && !hideNotif;
@@ -36,7 +36,7 @@ export default function Prompts({ onNotify }: Props) {
         "vervox-welcome"
       );
     } else {
-      onNotify("Notification permission blocked. Re-enable it in your browser site settings.", "danger");
+      onNotify("Notification permission is blocked. Re-enable it from the device or app settings.", "danger");
     }
   };
 
@@ -64,7 +64,7 @@ export default function Prompts({ onNotify }: Props) {
           <p className="text-[13px] font-semibold text-slate-900">Enable reminders</p>
           <p className="text-[11px] text-slate-500">
             {perm === "denied"
-              ? "Notifications are blocked in your browser settings."
+              ? "Notifications are blocked by the device permission setting."
               : "Alarms, partner completions and nudges on your lock screen."}
           </p>
         </div>
