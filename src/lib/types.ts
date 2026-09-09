@@ -1,4 +1,4 @@
-export type ViewType = "today" | "scheduled";
+export type ViewType = "today" | "scheduled" | "partner" | "pods";
 
 /** Routed screens reachable from navigation menu. */
 export type AppView = "all" | "today" | "scheduled" | "partner" | "pods";
